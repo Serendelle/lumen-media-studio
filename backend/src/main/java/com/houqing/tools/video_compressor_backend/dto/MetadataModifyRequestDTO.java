@@ -1,16 +1,26 @@
 package com.houqing.tools.video_compressor_backend.dto;
 
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 @Data
 public class MetadataModifyRequestDTO {
+    @NotBlank
     private String uniqueFilename;
-    // 拍摄设备, e.g., "iPhone 16 Pro"
+    @Size(max = 256)
     private String model;
-    // 拍摄时间, 格式为 "yyyy:MM:dd HH:mm:ss"
+    /** yyyy:MM:dd HH:mm:ss */
+    @Pattern(regexp = "^\\d{4}:\\d{2}:\\d{2} \\d{2}:\\d{2}:\\d{2}$", message = "时间格式应为 yyyy:MM:dd HH:mm:ss")
     private String dateTimeOriginal;
-    // 纬度
+    @DecimalMin("-90") @DecimalMax("90")
     private Double gpsLatitude;
-    // 经度
+    @DecimalMin("-180") @DecimalMax("180")
     private Double gpsLongitude;
+    // ---- extensions ----
+    @Size(max = 256) private String title;
+    @Size(max = 256) private String artist;
+    @Size(max = 256) private String comment;
+    @Size(max = 256) private String copyright;
+    @Size(max = 256) private String make;
+    private Boolean clearGps;
 }

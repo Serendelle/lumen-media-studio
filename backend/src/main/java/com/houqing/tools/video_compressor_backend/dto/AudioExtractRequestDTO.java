@@ -1,13 +1,20 @@
 package com.houqing.tools.video_compressor_backend.dto;
 
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 @Data
 public class AudioExtractRequestDTO {
-    // 原始视频的唯一文件名
+    @NotBlank
     private String uniqueFilename;
-    // 视频时长，用于计算进度
+    /** Original field, ignored. */
     private double duration;
-    // 目标音频格式 (e.g., "mp3", "aac", "wav")
-    private String targetFormat;
+    @Pattern(regexp = "mp3|aac|m4a|wav|flac", message = "targetFormat 仅支持 mp3/aac/m4a/wav/flac")
+    private String targetFormat = "mp3";
+    // ---- extensions ----
+    @Min(32) @Max(320)
+    private Integer bitrateKbps;
+    private Integer sampleRate;
+    @Min(1) @Max(2)
+    private Integer channels;
 }

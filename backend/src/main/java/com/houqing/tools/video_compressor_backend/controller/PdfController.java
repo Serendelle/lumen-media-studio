@@ -1,10 +1,12 @@
 package com.houqing.tools.video_compressor_backend.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.houqing.tools.video_compressor_backend.auth.CurrentUser;
 import com.houqing.tools.video_compressor_backend.dto.PdfProcessRequestDTO;
-import com.houqing.tools.video_compressor_backend.dto.TaskProgressDTO;
-import com.houqing.tools.video_compressor_backend.service.PdfService;
-import com.houqing.tools.video_compressor_backend.service.TaskService;
-import org.springframework.http.ResponseEntity;
+import com.houqing.tools.video_compressor_backend.media.TaskEngine;
+import com.houqing.tools.video_compressor_backend.media.TaskView;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -12,30 +14,25 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/pdf")
 public class PdfController {
+    private final TaskEngine engine;
+    private final ObjectMapper mapper;
 
-    private final PdfService pdfService;
-    private final TaskService taskService;
-
-    public PdfController(PdfService pdfService, TaskService taskService) {
-        this.pdfService = pdfService;
-        this.taskService = taskService;
+    public PdfController(TaskEngine engine, ObjectMapper mapper) {
+        this.engine = engine;
+        this.mapper = mapper;
     }
 
-    // 统一的 PDF 处理接口
     @PostMapping("/process")
-    public ResponseEntity<?> processPdf(@RequestBody PdfProcessRequestDTO request) {
-        TaskProgressDTO task = taskService.createTask();
-        pdfService.processPdf(task.getTaskId(), request);
-        return ResponseEntity.ok(Map.of("taskId", task.getTaskId()));
+    public Map<String, Object> process(@Valid @RequestBody PdfProcessRequestDTO req,
+                                       @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+        ObjectNode p = req.getSettings() != null && req.getSettings().isObject()
+                ? ((ObjectNode) req.getSettings()).deepCopy() : mapper.createObjectNode();
+        p.put("tool", req.getTool());
+        return TaskResponses.created(engine.submit(CurrentUser.id(), "pdf.process", p, req.getFilenames(), "PRO", key));
     }
 
-    // 进度查询接口 (复用 TaskService)
     @GetMapping("/progress/{taskId}")
-    public ResponseEntity<TaskProgressDTO> getProgress(@PathVariable String taskId) {
-        TaskProgressDTO task = taskService.getTask(taskId);
-        if (task == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(task);
+    public TaskView progress(@PathVariable String taskId) {
+        return engine.toView(engine.require(CurrentUser.id(), taskId));
     }
 }

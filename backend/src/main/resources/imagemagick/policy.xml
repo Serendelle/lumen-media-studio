@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Restrictive policy loaded via MAGICK_CONFIGURE_PATH for every ImageMagick call made by the backend. -->
+<policymap>
+  <!-- resource ceilings -->
+  <policy domain="resource" name="memory" value="1GiB"/>
+  <policy domain="resource" name="map" value="2GiB"/>
+  <policy domain="resource" name="disk" value="4GiB"/>
+  <policy domain="resource" name="width" value="16KP"/>
+  <policy domain="resource" name="height" value="16KP"/>
+  <policy domain="resource" name="area" value="256MP"/>
+  <policy domain="resource" name="list-length" value="512"/>
+  <policy domain="resource" name="time" value="300"/>
+  <!-- no reading from URLs, no '@file' indirection, no shell-out delegates -->
+  <policy domain="path" rights="none" pattern="@*"/>
+  <policy domain="delegate" rights="none" pattern="*"/>
+  <policy domain="delegate" rights="execute" pattern="gs"/>
+  <!-- deny every coder, then allow only what the product uses -->
+  <policy domain="coder" rights="none" pattern="*"/>
+  <policy domain="coder" rights="read|write" pattern="{JPEG,JPG,PNG,PNG8,PNG24,PNG32,PNG48,PNG64,WEBP,AVIF,HEIC,HEIF,GIF,BMP,TIFF,TIF}"/>
+  <policy domain="coder" rights="read" pattern="{SVG,MSVG,INTERNAL}"/>
+  <policy domain="coder" rights="read|write" pattern="{PDF}"/>
+  <policy domain="module" rights="none" pattern="{URL,HTTP,HTTPS,FTP,MSL,MVG,TEXT,LABEL,EPHEMERAL,SHOW,WIN,PLT,XPS,PS,EPS,EPI}"/>
+</policymap>
