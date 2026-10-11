@@ -1,0 +1,38 @@
+# ---- secrets (NEVER commit) ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- runtime data ----
+data/
+backend/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+uploads/
+outputs/
+logs/
+*.log
+
+# ---- build output ----
+target/
+backend/target/
+node_modules/
+frontend/dist/
+.mvn/wrapper/maven-wrapper.jar
+
+# ---- original vendor drop (kept locally for reference only) ----
+/video-compressor-backend-master/
+
+# ---- test media generated at test time ----
+backend/src/test/resources/media/generated/
+
+# ---- IDE / OS ----
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
