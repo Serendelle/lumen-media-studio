@@ -36,3 +36,6 @@ backend/src/test/resources/media/generated/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# ---- jqwik local failure database ----
+.jqwik-database
