@@ -49,6 +49,8 @@ public class RemoveBackgroundHandler implements MediaTaskHandler {
 
         List<String> cmd = new ArrayList<>(tools.command(Tool.REMBG));
         cmd.add("i");
+        String model = props.tools().rembgModel();
+        if (model != null && model.matches("[a-z0-9_-]{2,40}")) { cmd.add("-m"); cmd.add(model); }
         cmd.add(ctx.inputPath(in).toString());
         cmd.add(out.toString());
         // model download + inference can be slow on first run

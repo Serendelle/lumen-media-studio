@@ -3,10 +3,8 @@ package com.houqing.tools.video_compressor_backend.auth;
 import com.houqing.tools.video_compressor_backend.common.ApiException;
 import com.houqing.tools.video_compressor_backend.common.ErrorCode;
 import com.houqing.tools.video_compressor_backend.config.AppProperties;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
 
@@ -35,7 +33,7 @@ public class AuthService {
         static UserView of(UserAccount u) { return new UserView(u.getId(), u.getUsername(), u.getDisplayName()); }
     }
 
-    @Transactional
+    /** Not @Transactional: a single insert, and a failed insert must not poison the follow-up lookup. */
     public AuthResult register(String username, String password, String displayName) {
         if (!props.security().allowRegistration()) throw new ApiException(ErrorCode.REGISTRATION_DISABLED);
         String name = username.trim();
@@ -47,8 +45,10 @@ public class AuthService {
         u.setCreatedAt(System.currentTimeMillis());
         try {
             users.saveAndFlush(u);
-        } catch (DataIntegrityViolationException e) {
-            throw new ApiException(ErrorCode.USERNAME_TAKEN);
+        } catch (org.springframework.dao.DataAccessException e) {
+            // concurrent registration of the same name: SQLite reports the UNIQUE violation generically
+            if (users.existsByUsernameIgnoreCase(name)) throw new ApiException(ErrorCode.USERNAME_TAKEN);
+            throw e;
         }
         return new AuthResult(jwt.issue(u), jwt.ttlSeconds(), UserView.of(u));
     }

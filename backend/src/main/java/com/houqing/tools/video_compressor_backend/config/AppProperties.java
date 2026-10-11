@@ -16,7 +16,7 @@ public record AppProperties(
         Ai ai
 ) {
     public record Tools(String ffmpeg, String ffprobe, String exiftool, String magick,
-                        String rembg, String conda, String rembgEnv, String ghostscript) {}
+                        String rembg, String conda, String rembgEnv, String ghostscript, String rembgModel) {}
 
     public record Media(int maxConcurrent, int queueCapacity, int perUserActiveLimit,
                         int ffmpegThreads, int taskTimeoutMinutes, long minFreeDiskMb) {}

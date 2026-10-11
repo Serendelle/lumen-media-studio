@@ -73,8 +73,10 @@ public class FileTypeDetector {
     public Detected detect(Path file, String originalName) {
         String mime;
         try (InputStream in = Files.newInputStream(file)) {
-            // the name only breaks ties between container siblings (mp4/m4a); magic bytes decide the family
-            mime = tika.detect(in, originalName == null ? null : originalName.toLowerCase(Locale.ROOT));
+            if (Files.size(file) == 0) throw new ApiException(ErrorCode.UNSUPPORTED_MEDIA, "文件为空");
+            // content only: Tika falls back to the file-name extension when the bytes are unknown, which would let
+            // a text file named "x.png" pass as an image. Audio-only MP4s are reclassified after ffprobe.
+            mime = tika.detect(in);
         } catch (IOException e) {
             throw new ApiException(ErrorCode.MEDIA_UNREADABLE);
         }

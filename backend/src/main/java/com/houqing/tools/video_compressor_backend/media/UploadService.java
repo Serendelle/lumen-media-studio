@@ -49,6 +49,14 @@ public class UploadService {
             ObjectNode info = null;
             if (mf.kind().isAv()) {
                 MediaProbe.MediaInfo mi = probe.probe(storage.pathOf(mf)); // throws MEDIA_UNREADABLE
+                if (mf.kind() == MediaKind.VIDEO && !mi.hasVideo() && mi.hasAudio()) {
+                    // an .m4a shares the MP4 container signature: classify by the streams actually present
+                    mf.setMediaType(MediaKind.AUDIO.name());
+                    mf.setMimeType("audio/mp4");
+                    if (!allowed.contains(MediaKind.AUDIO)) {
+                        throw new ApiException(ErrorCode.UNSUPPORTED_MEDIA, "该入口不接受纯音频文件");
+                    }
+                }
                 if (mf.kind() == MediaKind.VIDEO && !mi.hasVideo()) {
                     throw new ApiException(ErrorCode.MEDIA_UNREADABLE, "未检测到视频画面");
                 }

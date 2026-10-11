@@ -29,7 +29,10 @@ public class DownloadTicketService {
     public record Ticket(String value, long expiresAt) {}
 
     public Ticket issue(long userId, String fileId) {
-        long exp = System.currentTimeMillis() + TTL_MS;
+        return issue(userId, fileId, System.currentTimeMillis() + TTL_MS);
+    }
+
+    Ticket issue(long userId, String fileId, long exp) {
         String payload = fileId + "|" + userId + "|" + exp;
         String sig = ENC.encodeToString(hmac(key, payload.getBytes(StandardCharsets.UTF_8)));
         return new Ticket(ENC.encodeToString(payload.getBytes(StandardCharsets.UTF_8)) + "." + sig, exp);

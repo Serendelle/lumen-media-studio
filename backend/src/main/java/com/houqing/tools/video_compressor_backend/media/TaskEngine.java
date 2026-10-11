@@ -143,7 +143,18 @@ public class TaskEngine {
         t.setIdempotencyKey(idempotencyKey == null || idempotencyKey.isBlank() ? null : idempotencyKey);
         t.setCreatedAt(now);
         t.setUpdatedAt(now);
-        repo.save(t);
+        try {
+            repo.saveAndFlush(t);
+        } catch (org.springframework.dao.DataAccessException e) {
+            // two concurrent submits with the same Idempotency-Key: the unique index lets exactly one win.
+            // (the SQLite dialect reports UNIQUE violations as a generic JpaSystemException, so catch broadly and
+            // only swallow it when the winning row really exists)
+            if (t.getIdempotencyKey() != null) {
+                var winner = repo.findByOwnerIdAndIdempotencyKey(ownerId, t.getIdempotencyKey());
+                if (winner.isPresent()) return winner.get();
+            }
+            throw e;
+        }
 
         enqueue(t.getId(), inputs);
         return t;

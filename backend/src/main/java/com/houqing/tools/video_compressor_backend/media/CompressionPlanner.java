@@ -69,8 +69,9 @@ public final class CompressionPlanner {
     }
 
     static long minFeasibleBytes(double durationSec, int w, int h, double fps, int audioKbps, double minBpp) {
-        double videoBps = Math.max(MIN_VIDEO_KBPS * 1000.0, minBpp * w * h * fps);
-        double total = (videoBps + audioKbps * 1000.0) / 8 * durationSec / CONTAINER_HEADROOM;
+        // whole kbps rounded up (+1 margin): plan() floors the kbps it derives from a byte budget
+        long videoKbps = (long) Math.ceil(Math.max(MIN_VIDEO_KBPS, minBpp * w * h * fps / 1000.0)) + 1;
+        double total = (videoKbps + audioKbps) * 1000.0 / 8 * durationSec / CONTAINER_HEADROOM;
         return (long) Math.ceil(total);
     }
 
