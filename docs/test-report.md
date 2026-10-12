@@ -152,3 +152,20 @@ mvn -B test -Dtest=AiLiveTests -Dai.live=true
 - 长时间、多用户同时使用智能模式的压力测试未执行。
 - 只测试了 `deepseek-chat`；`deepseek-v4-pro`、`deepseek-flash` 未测试（可通过 `DEEPSEEK_MODEL` 切换）。
 - 网络中断时的重试（429 / 5xx / 连接失败，最多 3 次）只有代码实现，没有用自动化测试模拟网络故障。
+
+---
+
+# 阶段四补充：部署验证
+
+- 最终一次完整执行（`mvn -B test`）：**76** 个测试，**75 通过**，0 失败，1 跳过（`AiLiveTests`，opt-in），耗时 1 分 20 秒。新增的 2 个测试：出站代理配置解析、占位符 Key 视为未配置。
+- `DEEPSEEK_PROXY=http://127.0.0.1:7890` 下单独执行 `AiLiveTests`：通过（34.8 s），日志显示 `DeepSeek requests use proxy 127.0.0.1:7890`；日志中 `sk-…` 形式的字符串为 0 处。
+
+| 脚本 | 场景 | 实际结果 |
+|---|---|---|
+| `check-environment.ps1` | 本机全部依赖已安装 | 11 项检查，必需项齐全，退出码 0；Ghostscript 通过注册表找到；Key 只显示来源，不显示值 |
+| `start-windows.ps1 -Rebuild` | 完整重建 | npm ci、前端构建、Maven Wrapper 自动下载 Maven 3.9.11 并完成打包，服务启动，健康检查 UP |
+| `start-windows.ps1` | 已构建、输出被管道接收 | 11 秒后返回，状态 UP，列出 6 个工具和剩余磁盘空间；修复了 Start-Process 继承管道导致脚本不返回的问题 |
+| `start-windows.ps1` | 服务已在运行 | 提示已在运行（显示 PID），退出码 0 |
+| `start-windows.ps1 -Port 8091` | 端口被其他程序占用 | 「端口 8091 已被其他程序占用…」，退出码 1 |
+| `stop-windows.ps1` | 停止 | 结束整个进程树，事后没有残留的 java 进程 |
+| 单端口访问 | 后端直接提供前端 | `/`、`/studio`、`/login` 返回 200（页面）；静态资源 200；`/api/tasks` 未登录返回 401 |
