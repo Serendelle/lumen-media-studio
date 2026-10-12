@@ -39,3 +39,6 @@ Thumbs.db
 
 # ---- jqwik local failure database ----
 .jqwik-database
+
+# ---- local tooling ----
+.claude/

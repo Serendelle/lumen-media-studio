@@ -1,0 +1,81 @@
+/*
+ * Lumen design tokens — 小清新 · 电影感 · 自然光 · 低饱和.
+ * Base palette from the brief; "-ink" variants are darker shades used wherever text sits on colour,
+ * chosen to keep WCAG AA contrast (≥ 4.5:1) on the cream background.
+ */
+:root {
+  /* palette */
+  --cream: #f7f7f2;
+  --cream-deep: #efefe7;
+  --paper: #fcfcf9;
+  --mint: #d9ede4;
+  --mint-ink: #3b7360;
+  --fog: #dce8f0;
+  --fog-ink: #46677d;
+  --apricot: #f3e3d7;
+  --apricot-ink: #9a5b34;
+  --ink: #303a37;
+  --ink-2: #56625e;
+  --ink-3: #7d8884;
+  --line: rgba(48, 58, 55, 0.1);
+  --line-strong: rgba(48, 58, 55, 0.18);
+
+  /* semantic */
+  --bg: var(--cream);
+  --surface: var(--paper);
+  --surface-sunk: var(--cream-deep);
+  --text: var(--ink);
+  --text-2: var(--ink-2);
+  --text-3: var(--ink-3);
+  --accent: var(--mint-ink);
+  --accent-soft: var(--mint);
+  --ok: #3b7360;
+  --warn: #9a5b34;
+  --danger: #a5463e;
+  --danger-soft: #f6e1dd;
+  --focus: #46677d;
+
+  /* type */
+  --font-display: 'Fraunces Variable', 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', Georgia, serif;
+  --font-sans: 'Inter', -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: clamp(1.6rem, 1.2rem + 1.6vw, 2.4rem);
+  --fs-hero: clamp(2.6rem, 1.4rem + 5.6vw, 6.2rem);
+
+  /* space & shape */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 72px;
+  --sp-9: 120px;
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 22px;
+  --r-pill: 999px;
+  --gutter: clamp(16px, 4vw, 56px);
+  --maxw: 1240px;
+
+  /* depth: soft daylight, never heavy */
+  --shadow-1: 0 1px 2px rgba(48, 58, 55, 0.04), 0 2px 8px rgba(48, 58, 55, 0.04);
+  --shadow-2: 0 2px 6px rgba(48, 58, 55, 0.05), 0 12px 32px rgba(48, 58, 55, 0.07);
+  --shadow-3: 0 24px 64px rgba(48, 58, 55, 0.12);
+
+  /* motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-film: cubic-bezier(0.65, 0, 0.35, 1);
+  --t-fast: 160ms;
+  --t-med: 320ms;
+  --t-slow: 720ms;
+
+  color-scheme: light;
+}

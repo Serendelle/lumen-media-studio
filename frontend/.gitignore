@@ -1,0 +1,7 @@
+node_modules
+dist
+*.local
+.vite
+
+# temporary e2e fixtures
+public/__e2e/

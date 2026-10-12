@@ -146,9 +146,16 @@ public class VideoCompressHandler implements MediaTaskHandler {
                             Map.of("minFeasibleMB", Math.round(plan.minFeasibleBytes() / 1048576.0 * 10) / 10.0,
                                     "suggestions", plan.suggestions()));
                 }
+                long kbps = plan.videoKbps();
+                // a target larger than the source must not inflate the video: never exceed the source bitrate
+                long sourceKbps = info.videoBitrate() / 1000;
+                if (sourceKbps > 0 && kbps > sourceKbps && enc.dims() == null) {
+                    kbps = sourceKbps;
+                    summary.put("cappedToSourceBitrate", true);
+                }
                 summary.put("targetSizeMB", p.path("targetSizeMB").asDouble());
-                summary.put("targetVideoBitrateKbps", plan.videoKbps());
-                twoPass(ctx, inputPath, output, enc, plan.videoKbps());
+                summary.put("targetVideoBitrateKbps", kbps);
+                twoPass(ctx, inputPath, output, enc, kbps);
             }
             case "bitrate" -> {
                 long kbps = p.path("videoBitrateKbps").asInt();
