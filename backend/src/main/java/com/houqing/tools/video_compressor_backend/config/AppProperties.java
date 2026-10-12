@@ -26,9 +26,12 @@ public record AppProperties(
     public record Cors(List<String> allowedOrigins) {}
 
     /** apiKey is only ever read server-side; toString is overridden so it never lands in logs. */
-    public record Ai(String apiKey, String baseUrl, String model) {
-        public boolean configured() { return apiKey != null && !apiKey.isBlank(); }
-        @Override public String toString() { return "Ai[baseUrl=" + baseUrl + ", model=" + model + ", apiKey=" + (configured() ? "***" : "<unset>") + "]"; }
+    public record Ai(String apiKey, String baseUrl, String model, String proxy) {
+        /** The .env.example placeholder ("sk-your-key-here") counts as not configured, so it never triggers 401s. */
+        public boolean configured() {
+            return apiKey != null && !apiKey.isBlank() && !apiKey.contains("your-key") && !apiKey.equalsIgnoreCase("change-me");
+        }
+        @Override public String toString() { return "Ai[baseUrl=" + baseUrl + ", model=" + model + ", proxy=" + proxy + ", apiKey=" + (configured() ? "***" : "<unset>") + "]"; }
     }
 
     public Path dataRoot() { return Path.of(dataDir).toAbsolutePath().normalize(); }

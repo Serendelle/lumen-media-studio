@@ -52,6 +52,8 @@ public class SecurityConfig {
                         // downloads authorize with either a bearer token or a signed short-lived ticket (checked in controller)
                         .requestMatchers(HttpMethod.GET, "/api/video/download/**", "/api/files/*/content").permitAll()
                         .requestMatchers("/api/**").authenticated()
+                        // the built frontend (index.html, hashed assets, SPA routes) is public static content
+                        .requestMatchers(HttpMethod.GET, "/**").permitAll()
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(o -> o
                         .jwt(j -> {})

@@ -29,7 +29,7 @@ public final class TestMedia {
                 new AppProperties.Media(2, 50, 4, 0, 60, 1),
                 new AppProperties.Security("unit-test-secret", 72, true),
                 new AppProperties.Cors(List.of("http://localhost:5173")),
-                new AppProperties.Ai("", "https://api.deepseek.com", "deepseek-chat"));
+                new AppProperties.Ai("", "https://api.deepseek.com", "deepseek-chat", ""));
     }
 
     public static ToolLocator tools() { return TOOLS; }

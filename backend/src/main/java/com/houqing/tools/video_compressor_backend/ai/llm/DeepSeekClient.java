@@ -42,7 +42,14 @@ public class DeepSeekClient implements LlmClient {
     public DeepSeekClient(AppProperties props, ObjectMapper mapper) {
         this.cfg = props.ai();
         this.mapper = mapper;
-        this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
+        HttpClient.Builder b = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15));
+        // optional outbound proxy (DEEPSEEK_PROXY=http://host:port); java.net.http uses no proxy unless told to
+        java.net.InetSocketAddress proxy = parseProxy(props.ai().proxy());
+        if (proxy != null) {
+            b.proxy(java.net.ProxySelector.of(proxy));
+            log.info("DeepSeek requests use proxy {}:{}", proxy.getHostString(), proxy.getPort());
+        }
+        this.http = b.build();
     }
 
     @Override public boolean configured() { return cfg.configured(); }
@@ -159,6 +166,18 @@ public class DeepSeekClient implements LlmClient {
         }
         for (Map.Entry<Integer, String[]> e : s.calls.entrySet()) {
             if (e.getValue()[0] == null) e.getValue()[0] = "call_" + e.getKey();
+        }
+    }
+
+    public static java.net.InetSocketAddress parseProxy(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            URI u = URI.create(value.contains("://") ? value.trim() : "http://" + value.trim());
+            if (u.getHost() == null || u.getPort() <= 0) return null;
+            return java.net.InetSocketAddress.createUnresolved(u.getHost(), u.getPort());
+        } catch (IllegalArgumentException e) {
+            log.warn("Ignoring invalid DEEPSEEK_PROXY value");
+            return null;
         }
     }
 

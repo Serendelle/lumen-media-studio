@@ -85,8 +85,29 @@ class AiUnitTests {
     }
 
     @Test
+    void proxySettingIsParsedStrictly() {
+        assertThat(DeepSeekClient.parseProxy("http://127.0.0.1:7890")).satisfies(a -> {
+            assertThat(a.getHostString()).isEqualTo("127.0.0.1");
+            assertThat(a.getPort()).isEqualTo(7890);
+        });
+        assertThat(DeepSeekClient.parseProxy("proxy.local:3128").getPort()).isEqualTo(3128);
+        assertThat(DeepSeekClient.parseProxy("")).isNull();
+        assertThat(DeepSeekClient.parseProxy("not a url")).isNull();
+        assertThat(DeepSeekClient.parseProxy("http://host-without-port")).isNull();
+    }
+
+    @Test
+    void placeholderKeyCountsAsNotConfigured() {
+        var cfg = com.houqing.tools.video_compressor_backend.config.AppProperties.Ai.class;
+        assertThat(new com.houqing.tools.video_compressor_backend.config.AppProperties.Ai("sk-your-key-here", "u", "m", "").configured()).isFalse();
+        assertThat(new com.houqing.tools.video_compressor_backend.config.AppProperties.Ai("", "u", "m", "").configured()).isFalse();
+        assertThat(new com.houqing.tools.video_compressor_backend.config.AppProperties.Ai("sk-abc123def456", "u", "m", "").configured()).isTrue();
+        assertThat(cfg).isNotNull();
+    }
+
+    @Test
     void apiKeyNeverAppearsInConfigToString() {
-        var ai = new com.houqing.tools.video_compressor_backend.config.AppProperties.Ai("sk-secret-value-123456", "https://x", "m");
+        var ai = new com.houqing.tools.video_compressor_backend.config.AppProperties.Ai("sk-secret-value-123456", "https://x", "m", "");
         assertThat(ai.toString()).doesNotContain("sk-secret").contains("***");
     }
 
