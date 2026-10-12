@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import TaskCard from './TaskCard.vue'
+import Icon from '@/components/common/Icon.vue'
 import ResultPreview from './ResultPreview.vue'
 import type { TaskView } from '@/api/types'
 import { useTasksStore } from '@/stores/tasks'
@@ -31,9 +32,10 @@ const shown = computed(() => {
     <TransitionGroup tag="div" name="list" class="list" aria-live="polite">
       <TaskCard v-for="t in shown" :key="t.taskId" :task="t" @preview="previewing = $event" />
     </TransitionGroup>
-    <p v-if="!shown.length" class="empty">
-      {{ filter === 'all' ? '提交的任务会出现在这里，进度实时更新；刷新页面也不会丢失。' : '暂无' }}
-    </p>
+    <div v-if="!shown.length" class="empty">
+      <span class="ei"><Icon name="spark" :size="20" /></span>
+      <p>{{ filter === 'all' ? '提交的任务会出现在这里，进度实时更新；刷新页面也不会丢失。' : '暂无' }}</p>
+    </div>
     <ResultPreview :task="previewing" @close="previewing = null" />
   </aside>
 </template>
@@ -79,8 +81,24 @@ const shown = computed(() => {
   gap: 10px;
 }
 .empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 28px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
   font-size: var(--fs-sm);
   color: var(--text-3);
+  text-align: center;
+}
+.ei {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--fog);
+  color: var(--fog-ink);
 }
 .list-enter-active,
 .list-leave-active {

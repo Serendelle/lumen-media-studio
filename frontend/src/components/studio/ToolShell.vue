@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import Icon from '@/components/common/Icon.vue'
 import { useSystemStore } from '@/stores/system'
 
 const props = defineProps<{
   title: string
   subtitle: string
+  icon?: string
+  kicker?: string
   feature: string
   tools?: string
   busy?: boolean
@@ -22,6 +25,10 @@ const available = computed(() => (system.caps ? system.feature(props.feature) : 
 <template>
   <section class="shell" :aria-labelledby="`t-${feature}`">
     <header class="head">
+      <div class="kick">
+        <span v-if="icon" class="ico"><Icon :name="icon" :size="18" /></span>
+        <span class="eyebrow">{{ kicker ?? feature }}</span>
+      </div>
       <h2 :id="`t-${feature}`" class="title">{{ title }}</h2>
       <p class="sub">{{ subtitle }}</p>
     </header>
@@ -53,6 +60,21 @@ const available = computed(() => (system.caps ? system.feature(props.feature) : 
 .shell {
   display: grid;
   gap: var(--sp-5);
+}
+.kick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ico {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(140deg, var(--mint), var(--fog));
+  color: var(--mint-ink);
 }
 .title {
   font-size: var(--fs-xl);

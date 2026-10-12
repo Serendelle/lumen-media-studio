@@ -46,7 +46,7 @@ function submit() {
 </script>
 
 <template>
-  <ToolShell title="图片处理" subtitle="批量压缩、改尺寸或转格式（单次最多 50 张）。设定目标体积时会按质量搜索；无法达到会如实标注并给出建议。"
+  <ToolShell icon="image" kicker="Image · Batch" title="图片处理" subtitle="批量压缩、改尺寸或转格式（单次最多 50 张）。设定目标体积时会按质量搜索；无法达到会如实标注并给出建议。"
              feature="image.process" tools="ImageMagick" :busy="busy" :error="error" :can-submit="canSubmit()" @submit="submit">
     <MediaPicker v-model="selected" :kinds="['IMAGE']" multiple :max="50" label="图片（可多选）" accept="image/*" />
     <Segmented v-model="tool" name="itool" label="操作"

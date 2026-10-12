@@ -30,7 +30,7 @@ function submit() {
 </script>
 
 <template>
-  <ToolShell title="PDF 转换" subtitle="把多张图片按顺序合并为一个 PDF，或把 PDF 的每一页渲染成图片（打包为 zip）。"
+  <ToolShell icon="pdf" kicker="Document · PDF" title="PDF 转换" subtitle="把多张图片按顺序合并为一个 PDF，或把 PDF 的每一页渲染成图片（打包为 zip）。"
              feature="pdf.process" tools="ImageMagick 与 Ghostscript" :busy="busy" :error="error" :can-submit="selected.length > 0" @submit="submit">
     <Segmented v-model="mode" name="pmode" label="方向"
                :options="[{ value: 'images-to-pdf', label: '图片 → PDF' }, { value: 'pdf-to-image', label: 'PDF → 图片' }]" />

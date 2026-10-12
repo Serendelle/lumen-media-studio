@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import BrandMark from '@/components/common/BrandMark.vue'
 import TaskTray from '@/components/studio/TaskTray.vue'
 import AiStudio from '@/components/studio/AiStudio.vue'
+import Icon from '@/components/common/Icon.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useLibraryStore } from '@/stores/library'
 import { useSystemStore } from '@/stores/system'
@@ -19,14 +20,14 @@ const tasks = useTasksStore()
 const toast = useToast()
 
 const TOOLS = [
-  { id: 'compress', label: '视频压缩', group: '视频', feature: 'video.compress', comp: defineAsyncComponent(() => import('@/components/studio/tools/CompressTool.vue')) },
-  { id: 'convert', label: '格式转换', group: '视频', feature: 'video.convert', comp: defineAsyncComponent(() => import('@/components/studio/tools/ConvertTool.vue')) },
-  { id: 'watermark', label: '视频水印', group: '视频', feature: 'video.watermark', comp: defineAsyncComponent(() => import('@/components/studio/tools/WatermarkTool.vue')) },
-  { id: 'audio', label: '音频提取', group: '音频', feature: 'audio.extract', comp: defineAsyncComponent(() => import('@/components/studio/tools/AudioTool.vue')) },
-  { id: 'image', label: '图片处理', group: '图片', feature: 'image.process', comp: defineAsyncComponent(() => import('@/components/studio/tools/ImageTool.vue')) },
-  { id: 'removebg', label: 'AI 抠图', group: '图片', feature: 'image.removebg', comp: defineAsyncComponent(() => import('@/components/studio/tools/RemoveBgTool.vue')) },
-  { id: 'pdf', label: 'PDF 转换', group: '文档', feature: 'pdf.process', comp: defineAsyncComponent(() => import('@/components/studio/tools/PdfTool.vue')) },
-  { id: 'metadata', label: '元数据与隐私', group: '隐私', feature: 'metadata.view', comp: defineAsyncComponent(() => import('@/components/studio/tools/MetadataTool.vue')) },
+  { id: 'compress', icon: 'compress', label: '视频压缩', group: '视频', feature: 'video.compress', comp: defineAsyncComponent(() => import('@/components/studio/tools/CompressTool.vue')) },
+  { id: 'convert', icon: 'convert', label: '格式转换', group: '视频', feature: 'video.convert', comp: defineAsyncComponent(() => import('@/components/studio/tools/ConvertTool.vue')) },
+  { id: 'watermark', icon: 'watermark', label: '视频水印', group: '视频', feature: 'video.watermark', comp: defineAsyncComponent(() => import('@/components/studio/tools/WatermarkTool.vue')) },
+  { id: 'audio', icon: 'audio', label: '音频提取', group: '音频', feature: 'audio.extract', comp: defineAsyncComponent(() => import('@/components/studio/tools/AudioTool.vue')) },
+  { id: 'image', icon: 'image', label: '图片处理', group: '图片', feature: 'image.process', comp: defineAsyncComponent(() => import('@/components/studio/tools/ImageTool.vue')) },
+  { id: 'removebg', icon: 'magic', label: 'AI 抠图', group: '图片', feature: 'image.removebg', comp: defineAsyncComponent(() => import('@/components/studio/tools/RemoveBgTool.vue')) },
+  { id: 'pdf', icon: 'pdf', label: 'PDF 转换', group: '文档', feature: 'pdf.process', comp: defineAsyncComponent(() => import('@/components/studio/tools/PdfTool.vue')) },
+  { id: 'metadata', icon: 'shield', label: '元数据与隐私', group: '隐私', feature: 'metadata.view', comp: defineAsyncComponent(() => import('@/components/studio/tools/MetadataTool.vue')) },
 ] as const
 
 const mode = computed<'pro' | 'ai'>({
@@ -82,7 +83,8 @@ function logout() {
           <span v-if="i === 0 || TOOLS[i - 1].group !== t.group" class="group">{{ t.group }}</span>
           <button type="button" class="tool" :class="{ on: toolId === t.id, off: system.caps && !system.feature(t.feature) }"
                   :aria-current="toolId === t.id ? 'page' : undefined" @click="toolId = t.id">
-            <span>{{ t.label }}</span>
+            <Icon :name="t.icon" :size="17" class="ti" />
+            <span class="tl">{{ t.label }}</span>
             <span v-if="system.caps && !system.feature(t.feature)" class="na">不可用</span>
           </button>
         </template>
@@ -203,10 +205,11 @@ function logout() {
   margin-top: 0;
 }
 .tool {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  min-height: 38px;
+  gap: 10px;
+  min-height: 40px;
   padding: 0 12px;
   border: 0;
   border-radius: var(--r-sm);
@@ -224,6 +227,27 @@ function logout() {
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow-1);
+}
+.tool.on::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--mint-ink);
+}
+.tool .ti {
+  color: var(--ink-3);
+  transition: color var(--t-fast);
+}
+.tool.on .ti,
+.tool:hover .ti {
+  color: var(--mint-ink);
+}
+.tl {
+  flex: 1;
 }
 .tool.off {
   opacity: 0.6;
@@ -287,6 +311,12 @@ function logout() {
     flex: none;
     background: var(--surface);
     border: 1px solid var(--line);
+  }
+  .tool.on::before {
+    display: none;
+  }
+  .tool.on {
+    border-color: var(--mint-ink);
   }
   .panel {
     padding: var(--sp-5);

@@ -1,0 +1,37 @@
+# Prompt version registry. The active version is recorded on every conversation (ai_conversations.prompt_version)
+# so a result can always be traced back to the exact prompts that produced it.
+active: 1.4.0
+versions:
+  - version: 1.4.0
+    date: 2026-10-12
+    system: system.yaml@1.4.0
+    skills:
+      requirement-analyst: 1.2.0
+      task-planner: 1.2.0
+      media-executor: 1.0.0
+      quality-reviewer: 1.0.0
+    notes: 需求理解官面向用户使用第二人称，澄清选项改为可点选的短句（真实运行中发现第三人称表述）。
+  - version: 1.3.0
+    date: 2026-10-12
+    system: system.yaml@1.3.0
+    skills:
+      requirement-analyst: 1.1.0
+      task-planner: 1.2.0
+      media-executor: 1.0.0
+      quality-reviewer: 1.0.0
+    notes: 规划官的隐私清理必须作用于交付文件（step 引用），而不是原文件（真实运行中发现转码会保留元数据）。
+  - version: 1.2.0
+    date: 2026-10-12
+    system: system.yaml@1.2.0
+    skills:
+      requirement-analyst: 1.1.0
+      task-planner: 1.1.0
+      media-executor: 1.0.0
+      quality-reviewer: 1.0.0
+    notes: 规划官必须引用分析官提交的 fileId；审核官只解释服务端核验结果，不自行判断数字。
+  - version: 1.1.0
+    date: 2026-10-12
+    notes: 加入「文件内容即数据」的提示注入防护规则。
+  - version: 1.0.0
+    date: 2026-10-12
+    notes: 初版四 Agent 分工。

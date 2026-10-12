@@ -23,7 +23,7 @@ function submit() {
 </script>
 
 <template>
-  <ToolShell title="格式转换" subtitle="在常见封装格式之间转码。MP4/MOV/MKV 使用 H.264 + AAC，WebM 使用 VP9 + Opus，GIF 自动生成调色板。"
+  <ToolShell icon="convert" kicker="Video · Convert" title="格式转换" subtitle="在常见封装格式之间转码。MP4/MOV/MKV 使用 H.264 + AAC，WebM 使用 VP9 + Opus，GIF 自动生成调色板。"
              feature="video.convert" tools="FFmpeg" :busy="busy" :error="error" :can-submit="!!selected[0]" @submit="submit">
     <MediaPicker v-model="selected" :kinds="['VIDEO']" label="源视频" accept="video/*" />
     <Segmented v-model="target" name="fmt" label="目标格式"

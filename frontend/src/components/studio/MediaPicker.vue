@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import Icon from '@/components/common/Icon.vue'
 import type { FileView, MediaKind } from '@/api/types'
 import { useLibraryStore } from '@/stores/library'
 import { useToast } from '@/composables/useToast'
@@ -96,7 +97,7 @@ function describe(f: FileView) {
       @dragleave="dragging = false"
       @drop.prevent="onDrop"
     >
-      <span class="plus" aria-hidden="true">＋</span>
+      <span class="plus" aria-hidden="true"><Icon name="upload" :size="20" /></span>
       <span>拖入文件，或<u>点击上传</u></span>
       <span class="hint">支持 {{ kinds.map(kindLabel).join(' / ') }} · 类型以文件内容为准</span>
       <input ref="input" type="file" class="sr-only" :multiple="multiple" :accept="accept" tabindex="-1" @change="onPick" />
@@ -179,9 +180,19 @@ function describe(f: FileView) {
   background: rgba(217, 237, 228, 0.35);
 }
 .plus {
-  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  background: var(--mint);
   color: var(--mint-ink);
-  line-height: 1;
+  transition: transform var(--t-med) var(--ease-out);
+}
+.drop:hover .plus,
+.drop.dragging .plus {
+  transform: translateY(-2px);
 }
 .hint {
   font-size: var(--fs-xs);

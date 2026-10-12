@@ -30,7 +30,7 @@ function submit() {
 </script>
 
 <template>
-  <ToolShell title="音频提取" subtitle="从视频（或音频）中取出音轨并转为所需格式。无损格式（WAV / FLAC）不需要设置码率。"
+  <ToolShell icon="audio" kicker="Audio · Extract" title="音频提取" subtitle="从视频（或音频）中取出音轨并转为所需格式。无损格式（WAV / FLAC）不需要设置码率。"
              feature="audio.extract" tools="FFmpeg" :busy="busy" :error="error" :can-submit="!!selected[0] && !noAudio" @submit="submit">
     <MediaPicker v-model="selected" :kinds="['VIDEO', 'AUDIO']" label="源文件" accept="video/*,audio/*" />
     <p v-if="noAudio" class="warn" role="note">该文件没有音轨，无法提取音频。</p>

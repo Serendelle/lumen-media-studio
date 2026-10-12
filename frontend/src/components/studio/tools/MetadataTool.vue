@@ -118,7 +118,7 @@ function fmt(v: unknown) {
 </script>
 
 <template>
-  <ToolShell title="元数据与隐私" subtitle="查看并编辑标题、作者、拍摄时间与 GPS；一键清理隐私信息（支持批量）。可编辑字段以该格式的实际能力为准，不承诺工具做不到的修改。"
+  <ToolShell icon="shield" kicker="Privacy · Metadata" title="元数据与隐私" subtitle="查看并编辑标题、作者、拍摄时间与 GPS；一键清理隐私信息（支持批量）。可编辑字段以该格式的实际能力为准，不承诺工具做不到的修改。"
              feature="metadata.view" tools="ExifTool 与 FFmpeg" :busy="busy" :error="error" :can-submit="!!single && dirty"
              submit-label="写入元数据（生成新文件）" @submit="submitEdit">
     <MediaPicker v-model="selected" :kinds="['IMAGE', 'VIDEO', 'AUDIO']" multiple :max="20" label="文件（单选查看与编辑，多选批量清理）" accept="image/*,video/*,audio/*" />

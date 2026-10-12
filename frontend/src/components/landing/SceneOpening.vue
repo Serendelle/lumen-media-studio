@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import LightField from './LightField.vue'
+import HeroFrame from './HeroFrame.vue'
 import { gsap, useGsap } from '@/composables/useMotion'
 import { useAuthStore } from '@/stores/auth'
 
@@ -14,7 +15,7 @@ useGsap(({ reduced }) => {
   // Content must never depend on animation frames to become visible: a tab opened in the background gets no
   // requestAnimationFrame, so in that case (and for reduced motion) the final state is shown directly.
   if (reduced || document.visibilityState === 'hidden') {
-    gsap.set(q('[data-reveal]'), { opacity: 1, y: 0 })
+    gsap.set(q('[data-reveal], [data-shot]'), { opacity: 1, y: 0 })
     gsap.set(q('.bar'), { scaleY: 0 })
     return
   }
@@ -32,6 +33,7 @@ useGsap(({ reduced }) => {
   tl.from(q('.timecode'), { opacity: 0, duration: 0.6 })
     .fromTo(q('.line > span'), { yPercent: 110 }, { yPercent: 0, duration: 1.15, stagger: 0.14 }, '-=0.3')
     .fromTo(q('[data-reveal]'), { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.9, stagger: 0.1 }, '-=0.7')
+    .fromTo(q('[data-shot]'), { opacity: 0, y: 40, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 1.4, ease: 'power3.out' }, '-=1.1')
     // letterbox "curtain" opens, revealing the navigation like the start of a film
     .to(q('.bar'), { scaleY: 0, duration: 1.2, ease: 'power3.inOut' }, '-=0.6')
 
@@ -63,6 +65,7 @@ useGsap(({ reduced }) => {
     </div>
 
     <div class="copy container">
+      <div class="text">
       <p class="eyebrow" data-reveal>Lumen · 流明智媒 · Media Studio for Creators</p>
       <h1 id="hero-title" class="title">
         <span class="line"><span>让每一帧，</span></span>
@@ -77,6 +80,8 @@ useGsap(({ reduced }) => {
         <RouterLink class="btn" :to="auth.isAuthenticated ? '/studio' : '/register'">开始创作</RouterLink>
         <a class="btn btn--ghost" href="#capabilities">看看它能做什么</a>
       </div>
+      </div>
+      <div class="shot" data-shot><HeroFrame /></div>
     </div>
 
     <a class="scroll-cue" href="#capabilities" aria-label="向下滚动">
@@ -152,9 +157,25 @@ useGsap(({ reduced }) => {
 }
 .copy {
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 80px);
   padding-top: 150px;
   padding-bottom: 120px;
   will-change: transform, opacity;
+}
+.shot {
+  justify-self: end;
+  width: min(100%, 440px);
+}
+@media (max-width: 980px) {
+  .copy {
+    grid-template-columns: 1fr;
+  }
+  .shot {
+    display: none;
+  }
 }
 .title {
   margin-top: var(--sp-4);

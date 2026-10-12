@@ -47,3 +47,37 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE INDEX IF NOT EXISTS idx_tasks_owner ON tasks(owner_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_idem ON tasks(owner_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
+
+-- ---------- AI mode (multi-agent conversations) ----------
+CREATE TABLE IF NOT EXISTS ai_conversations (
+    id             TEXT    PRIMARY KEY,
+    owner_id       INTEGER NOT NULL REFERENCES users(id),
+    title          TEXT    NOT NULL,
+    state          TEXT    NOT NULL,
+    plan_json      TEXT,
+    plan_version   INTEGER NOT NULL DEFAULT 0,
+    context_json   TEXT,
+    prompt_version TEXT    NOT NULL,
+    created_at     INTEGER NOT NULL,
+    updated_at     INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ai_conv_owner ON ai_conversations(owner_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS ai_messages (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id TEXT    NOT NULL REFERENCES ai_conversations(id),
+    role            TEXT    NOT NULL,
+    agent           TEXT,
+    content         TEXT    NOT NULL,
+    created_at      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ai_msg_conv ON ai_messages(conversation_id, id);
+
+CREATE TABLE IF NOT EXISTS ai_events (
+    seq             INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id TEXT    NOT NULL REFERENCES ai_conversations(id),
+    type            TEXT    NOT NULL,
+    payload_json    TEXT    NOT NULL,
+    created_at      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ai_evt_conv ON ai_events(conversation_id, seq);

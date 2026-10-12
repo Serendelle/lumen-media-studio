@@ -115,7 +115,7 @@ function submit() {
 </script>
 
 <template>
-  <ToolShell
+  <ToolShell icon="compress" kicker="Video · Compress"
     title="视频压缩"
     subtitle="按目标体积（两遍编码，精确命中）、恒定质量（CRF）或指定码率压缩，可同时调整分辨率、编码器、帧率与音频。"
     feature="video.compress"

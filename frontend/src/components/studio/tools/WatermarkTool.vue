@@ -30,7 +30,7 @@ function submit() {
 </script>
 
 <template>
-  <ToolShell title="视频水印" subtitle="把一张图片（推荐透明 PNG）叠加到视频上，可选九宫格位置、透明度与边距。"
+  <ToolShell icon="watermark" kicker="Video · Watermark" title="视频水印" subtitle="把一张图片（推荐透明 PNG）叠加到视频上，可选九宫格位置、透明度与边距。"
              feature="video.watermark" tools="FFmpeg" :busy="busy" :error="error" :can-submit="!!video[0] && !!mark[0]" @submit="submit">
     <div class="two">
       <MediaPicker v-model="video" :kinds="['VIDEO']" label="视频" accept="video/*" />

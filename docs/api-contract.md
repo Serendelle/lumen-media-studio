@@ -166,3 +166,42 @@
 
 - `GET /api/system/capabilities`（公开）：工具可用性、功能开关、限制参数、AI 是否已配置（只返回布尔值）、元数据能力矩阵
 - `GET /actuator/health`：包含 `mediaTools` 指标（各工具状态与剩余磁盘空间）
+
+## 11. 智能模式 `/api/ai`（新增）
+
+DeepSeek 只在后端调用，浏览器不会接触到 Key。未配置 Key 时，`POST /messages` 返回 `503 AI_UNAVAILABLE`。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/conversations` | 新建会话 → `ConversationView` |
+| GET | `/conversations?page&size` | 当前用户的会话列表 |
+| GET | `/conversations/{id}` | 快照：`{conversation, messages[], events[]}`，events 按 `seq` 升序 |
+| POST | `/conversations/{id}/messages` | `{text(1-2000), fileIds?(≤10，必须属于当前用户)}`，开始一次运行；会话正在处理时返回 409 |
+| POST | `/conversations/{id}/confirm` | `{version, approve}`：只有 `AWAITING_CONFIRMATION` 状态且版本号等于当前计划版本才执行，否则返回 409 |
+| POST | `/conversations/{id}/cancel` | 取消当前运行，并取消其中正在执行的任务 |
+| GET | `/conversations/{id}/events?after=<seq>` | SSE；也接受 `Last-Event-ID` 请求头，只补发 seq 之后的事件 |
+| GET | `/agents` | Agent 列表：编号、名称、SKILL 版本、工具白名单、当前 prompt 版本 |
+
+`ConversationView`：`{id, title, state, planVersion, plan, context{attachedFileIds, requirements, review}, promptVersion, createdAt, updatedAt}`
+
+`state`：`IDLE / ANALYZING / AWAITING_INPUT / PLANNING / AWAITING_CONFIRMATION / EXECUTING / REVIEWING / COMPLETED / FAILED / CANCELLED`
+
+### 事件类型（SSE `event:` 字段，`id:` 为 seq）
+
+| 事件 | 持久化 | payload |
+|---|---|---|
+| `state` | ✅ | `{state}` |
+| `message` | ✅ | `{id, role: user\|assistant, agent?, content, createdAt}` |
+| `text.delta` | ❌（只实时推送） | `{agent, delta}`：模型的流式文字，最终内容以随后的 `message` 为准 |
+| `agent` | ✅ | `{agent, status: working\|waiting\|done\|partial\|failed\|cancelled, note}` |
+| `tool.start` / `tool.done` | ✅ | `{agent, callId, name, args, ok, summary?}` |
+| `requirements` | ✅ | Agent 01 提交的结构化需求（含 `clarifications[].options`，前端显示为快速回复） |
+| `thought` | ✅ | 模型没有调用工具、直接输出的文字（用于排查） |
+| `plan` | ✅ | `{version, summary, steps[{id, tool, title, inputs[], params, rationale, qualityImpact, estimate?}], warnings[]}` |
+| `confirm.required` / `confirmed` | ✅ | `{version}` |
+| `step` | ✅ | `{stepId, status: QUEUED\|RUNNING\|SUCCEEDED\|FAILED\|CANCELLED\|SKIPPED, taskId?, progress?, stage?, outputFileId?, message?}` |
+| `review` | ✅ | `{checks[{stepId, name, ok, expected, actual, afterRetry?}], retries, allPassed, outputs[{stepId, tool, status, fileId, filename, sizeBytes}]}` |
+| `usage` | ✅ | `{model, llmCalls, promptTokens, completionTokens}` |
+| `error` | ✅ | `{code, message}` |
+
+计划步骤里的 `tool` 与 `/api/tasks` 的任务类型一一对应，`params` 与专业模式的参数相同（见第 4–8 节）；`inputs` 中的 `"step:N"` 表示使用第 N 步的输出文件。
