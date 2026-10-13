@@ -5,6 +5,8 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'home', component: () => import('@/views/LandingView.vue'), meta: { title: 'Lumen · 流明智媒' } },
+    // React landing page preview — swaps in for '/' once the 21st.dev components are in place
+    { path: '/next', name: 'home-react', component: () => import('@/views/ReactLandingView.vue'), meta: { title: 'Lumen · 流明智媒' } },
     { path: '/login', name: 'login', component: () => import('@/views/AuthView.vue'), meta: { title: '登录 · Lumen', guestOnly: true } },
     { path: '/register', name: 'register', component: () => import('@/views/AuthView.vue'), meta: { title: '注册 · Lumen', guestOnly: true } },
     {

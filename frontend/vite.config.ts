@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
 
 // The browser only ever talks to this origin; /api is proxied to the Spring backend.
@@ -7,7 +9,8 @@ import { fileURLToPath, URL } from 'node:url'
 const backend = process.env.LUMEN_BACKEND_URL ?? 'http://localhost:8080'
 
 export default defineConfig({
-  plugins: [vue()],
+  // Vue drives the app; React renders only the .tsx landing page (src/react, src/components/ui).
+  plugins: [vue(), react({ include: /\.tsx$/ }), tailwindcss()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

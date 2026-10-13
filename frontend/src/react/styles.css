@@ -1,0 +1,108 @@
+/*
+ * Tailwind for the React landing page only.
+ *
+ * The Vue app's tokens.css / base.css stay loaded globally, so Tailwind is isolated three ways:
+ *  1. theme(reference inline): no --font-* / --ease-* variables are written to :root (they would
+ *     overwrite Lumen's own tokens of the same name); values are inlined into the utilities instead.
+ *  2. No global preflight; a reset scoped to .tw-root replaces it.
+ *  3. Utilities are unlayered and generated only from .tsx sources, so they win over base.css element
+ *     rules (h1 { font-weight: 400 } …) inside the React tree and never touch Vue templates.
+ */
+@import 'tailwindcss/theme.css' theme(reference inline);
+@import 'tailwindcss/utilities.css' source(none);
+
+@source '../**/*.tsx';
+@source '../lib';
+
+@custom-variant dark (&:is(.dark *));
+
+/* shadcn-style semantic colours, scoped to the React tree (21st.dev components use these names) */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent-c);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+.tw-root {
+  --radius: 0.75rem;
+  --background: #000000;
+  --foreground: #fafafa;
+  --card: #0a0a0a;
+  --card-foreground: #fafafa;
+  --popover: #0a0a0a;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1a1a1a;
+  --secondary-foreground: #fafafa;
+  --muted: #1a1a1a;
+  --muted-foreground: #a1a1a1;
+  --accent-c: #1a1a1a;
+  --accent-foreground: #fafafa;
+  --destructive: #e5484d;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #a1a1a1;
+
+  min-height: 100svh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+/* scoped preflight — :where() keeps specificity at element level so any utility class overrides it */
+:where(.tw-root) *,
+:where(.tw-root) ::before,
+:where(.tw-root) ::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0 solid;
+}
+:where(.tw-root) :is(h1, h2, h3, h4, h5, h6) {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+}
+:where(.tw-root) a {
+  color: inherit;
+  text-decoration: inherit;
+}
+:where(.tw-root) :is(button, input, select, textarea) {
+  font: inherit;
+  color: inherit;
+  background-color: transparent;
+  border-radius: 0;
+}
+:where(.tw-root) :is(ol, ul, menu) {
+  list-style: none;
+}
+:where(.tw-root) :is(img, svg, video, canvas, audio, iframe, embed, object) {
+  display: block;
+  vertical-align: middle;
+}
+:where(.tw-root) :is(img, video) {
+  max-width: 100%;
+  height: auto;
+}
