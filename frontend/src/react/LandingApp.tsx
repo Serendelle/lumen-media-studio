@@ -7,6 +7,7 @@ import Capabilities from './sections/Capabilities'
 import Modes from './sections/Modes'
 import Workflow from './sections/Workflow'
 import Trust from './sections/Trust'
+import Pricing from './sections/Pricing'
 import Closing from './sections/Closing'
 
 // fractal-noise tile for the film-grain overlay
@@ -31,6 +32,7 @@ export default function LandingApp() {
         <Modes />
         <Workflow />
         <Trust />
+        <Pricing />
       </main>
       <Closing />
       {/* film grain over the whole page: keeps the pure black from looking flat */}

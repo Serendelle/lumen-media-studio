@@ -26,6 +26,7 @@ const SECTIONS = [
   { href: '#features', label: '能力' },
   { href: '#modes', label: '两种模式' },
   { href: '#workflow', label: '智能工作流' },
+  { href: '#pricing', label: '价格' },
 ]
 
 export default function Navbar() {
