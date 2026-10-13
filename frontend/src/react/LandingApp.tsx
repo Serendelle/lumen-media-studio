@@ -9,6 +9,7 @@ import Workflow from './sections/Workflow'
 import Trust from './sections/Trust'
 import Pricing from './sections/Pricing'
 import Closing from './sections/Closing'
+import StarfieldBackdrop from './StarfieldBackdrop'
 
 // fractal-noise tile for the film-grain overlay
 const GRAIN = `url("data:image/svg+xml,${encodeURIComponent(
@@ -27,12 +28,14 @@ export default function LandingApp() {
       <Navbar />
       <main id="main">
         <Hero />
-        <Showcase />
-        <Capabilities />
-        <Modes />
-        <Workflow />
-        <Trust />
-        <Pricing />
+        <StarfieldBackdrop>
+          <Showcase />
+          <Capabilities />
+          <Modes />
+          <Workflow />
+          <Trust />
+          <Pricing />
+        </StarfieldBackdrop>
       </main>
       <Closing />
       {/* film grain over the whole page: keeps the pure black from looking flat */}
