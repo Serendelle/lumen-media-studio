@@ -1,24 +1,29 @@
 import { useEffect, useRef } from 'react'
 import { animate, motion, useInView, useReducedMotion } from 'motion/react'
-import { AudioLines, Film, ShieldCheck, type LucideIcon } from 'lucide-react'
+import { Film, ShieldAlert, Timer, type LucideIcon } from 'lucide-react'
 
 /*
- * Illustrative studio dashboard (a mock-up, not live data). File names match the demo media used in the
- * project's screenshots, so the story lines up with the live demo.
+ * Measured results, every figure taken from docs/test-report.md (real runs against real tools and the real
+ * DeepSeek model). Keep it that way: no number on this panel that the report can't back up.
  */
 const STATS = [
-  { label: 'Tasks today', value: 24, format: (n: number) => String(Math.round(n)), delta: '+3' },
-  { label: 'Space saved', value: 3.2, format: (n: number) => `${n.toFixed(1)} GB`, delta: '−87%' },
-  { label: 'Verified', value: 100, format: (n: number) => `${Math.round(n)}%`, delta: '↑' },
+  { label: 'Compressed', value: 1.96, format: (n: number) => `${n.toFixed(2)} MB`, note: '目标 ≤ 2 MB ✓' },
+  { label: 'Test pass rate', value: 100, format: (n: number) => `${Math.round(n)}%`, note: '73 / 73 已执行' },
+  { label: 'Checks passed', value: 9, format: (n: number) => `${Math.round(n)}/9`, note: '核验项全部通过' },
 ]
 
-const TASKS: { icon: LucideIcon; name: string; meta: string; result: string }[] = [
-  { icon: Film, name: '西湖 散步.mp4', meta: '视频压缩 · 2 分钟前', result: '142 MB → 18 MB' },
-  { icon: AudioLines, name: '旅行 vlog.mp4', meta: '音频提取 · 8 分钟前', result: 'MP3 · 192 kbps' },
-  { icon: ShieldCheck, name: '西湖 日落.jpg', meta: '隐私清理 · 15 分钟前', result: 'GPS 已清除' },
+const RUNS: { icon: LucideIcon; name: string; meta: string; result: string }[] = [
+  { icon: Film, name: '智能模式 · 完整流程', meta: '压缩到 2MB 以内 + 提取 MP3 + 清除位置', result: '4.42 MB → 1.96 MB' },
+  { icon: Timer, name: '规划 + 执行 + 审核', meta: '5 次模型调用，真实处理', result: '约 30 秒' },
+  { icon: ShieldAlert, name: '提示注入测试', meta: '恶意指令藏在文件名里', result: '0 次越权操作' },
 ]
 
-const BARS = [34, 46, 40, 55, 49, 62, 58, 71, 66, 79, 74, 93]
+// automated test pass rate across the three fix-and-rerun rounds
+const ROUNDS = [
+  { label: '第 1 轮', value: 89.8 },
+  { label: '第 2 轮', value: 98.3 },
+  { label: '第 3 轮', value: 100 },
+]
 
 /** Counts up from 0 the first time it scrolls into view; renders the final value otherwise. */
 function CountUp({ value, format }: { value: number; format: (n: number) => string }) {
@@ -48,7 +53,7 @@ export default function Dashboard() {
           <span className="size-3 rounded-full bg-[#febc2e]" />
           <span className="size-3 rounded-full bg-[#28c840]" />
         </div>
-        <span className="text-muted-foreground absolute left-1/2 -translate-x-1/2 text-xs font-medium">Lumen — Studio</span>
+        <span className="text-muted-foreground absolute left-1/2 -translate-x-1/2 text-xs font-medium">Lumen — Benchmarks</span>
       </div>
 
       <div className="space-y-6 p-5 md:p-6">
@@ -59,15 +64,15 @@ export default function Dashboard() {
               <p className="text-foreground mt-2 text-xl font-semibold tabular-nums md:text-3xl">
                 <CountUp value={s.value} format={s.format} />
               </p>
-              <p className="mt-1 text-xs font-medium text-[#3ddc84]">{s.delta}</p>
+              <p className="mt-1 text-xs font-medium text-[#3ddc84]">{s.note}</p>
             </div>
           ))}
         </div>
 
         <div>
-          <p className="text-foreground mb-3 text-sm font-semibold">Recent tasks</p>
+          <p className="text-foreground mb-3 text-sm font-semibold">Real runs</p>
           <ul className="space-y-2.5">
-            {TASKS.map((t, i) => (
+            {RUNS.map((t, i) => (
               <motion.li
                 key={t.name}
                 initial={{ opacity: 0, x: -16 }}
@@ -81,9 +86,9 @@ export default function Dashboard() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="text-foreground block truncate text-sm font-medium">{t.name}</span>
-                  <span className="text-muted-foreground block text-xs">{t.meta}</span>
+                  <span className="text-muted-foreground block truncate text-xs">{t.meta}</span>
                 </span>
-                <span className="text-muted-foreground shrink-0 rounded-full bg-white/[0.07] px-2.5 py-1 text-xs whitespace-nowrap">
+                <span className="text-foreground shrink-0 rounded-full bg-white/[0.07] px-2.5 py-1 text-xs font-medium whitespace-nowrap tabular-nums">
                   {t.result}
                 </span>
               </motion.li>
@@ -92,20 +97,26 @@ export default function Dashboard() {
         </div>
 
         <div>
-          <p className="text-foreground mb-3 text-sm font-semibold">Monthly stats</p>
-          <div className="flex h-24 items-end gap-1.5 rounded-xl border border-white/10 bg-black/60 p-3">
-            {BARS.map((h, i) => (
-              <motion.span
-                key={i}
-                initial={{ scaleY: 0 }}
-                whileInView={{ scaleY: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.3 + i * 0.04, ease: [0.22, 1, 0.36, 1] }}
-                style={{ height: `${h}%`, transformOrigin: 'bottom' }}
-                className={i === BARS.length - 1 ? 'flex-1 rounded-sm bg-white' : 'flex-1 rounded-sm bg-white/20'}
-              />
+          <p className="text-foreground mb-3 text-sm font-semibold">Test pass rate · 3 rounds</p>
+          <div className="space-y-3 rounded-xl border border-white/10 bg-black/60 p-4">
+            {ROUNDS.map((r, i) => (
+              <div key={r.label} className="flex items-center gap-3 text-xs">
+                <span className="text-muted-foreground w-12 shrink-0">{r.label}</span>
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.07]">
+                  <motion.div
+                    initial={{ scaleX: 0 }}
+                    whileInView={{ scaleX: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.9, delay: 0.3 + i * 0.15, ease: [0.22, 1, 0.36, 1] }}
+                    style={{ width: `${r.value}%` }}
+                    className={'h-full origin-left rounded-full ' + (i === ROUNDS.length - 1 ? 'bg-white' : 'bg-white/30')}
+                  />
+                </div>
+                <span className="text-foreground w-12 shrink-0 text-right tabular-nums">{r.value}%</span>
+              </div>
             ))}
           </div>
+          <p className="text-muted-foreground/70 mt-3 text-[11px]">数据来自项目测试报告中的真实执行记录。</p>
         </div>
       </div>
     </div>
