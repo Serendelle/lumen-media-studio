@@ -1,5 +1,5 @@
 import { Fragment, useRef, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
-import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react'
+import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import { cn } from '@/lib/utils'
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
@@ -20,21 +20,19 @@ export function Section({ id, className, children }: { id?: string; className?: 
   )
 }
 
-/** One title word, lit by scroll progress within its slice of the heading's range. */
-function Word({ progress, from, to, children }: { progress: MotionValue<number>; from: number; to: number; children: string }) {
-  const t = useTransform(progress, (p) => clamp01((p - from) / (to - from)))
-  const opacity = useTransform(t, (v) => 0.12 + 0.88 * v)
-  const filter = useTransform(t, (v) => `blur(${(1 - v) * 8}px)`)
-  return (
-    <motion.span aria-hidden="true" style={{ opacity, filter }} className="inline-block">
-      {children}
-    </motion.span>
-  )
+const EASE = [0.22, 1, 0.36, 1] as const
+
+// Word-by-word entrance, played once when the heading enters view. Time-based on purpose: a scroll-scrubbed
+// version left headings half-blurred whenever the reader stopped scrolling mid-way.
+const headingVariants = { hidden: {}, shown: { transition: { staggerChildren: 0.07 } } }
+const wordVariants = {
+  hidden: { opacity: 0, y: '0.35em', filter: 'blur(6px)' },
+  shown: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.8, ease: EASE } },
 }
 
 /**
- * Eyebrow + title + lede. The title lights up word by word as it scrolls up the screen, with a soft
- * white spotlight blooming behind it.
+ * Eyebrow + title + lede. The title rises in word by word once it enters view; a soft white spotlight
+ * behind it blooms with scroll.
  */
 export function SectionHeading({
   eyebrow,
@@ -51,7 +49,6 @@ export function SectionHeading({
   const reduce = useReducedMotion()
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.95', 'start 0.35'] })
   const glow = useTransform(scrollYProgress, (p) => p)
-  const ledeOpacity = useTransform(scrollYProgress, (p) => clamp01((p - 0.55) / 0.45))
   const words = title.split(' ')
 
   return (
@@ -65,25 +62,30 @@ export function SectionHeading({
         className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-[360px] w-[min(820px,120vw)] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(closest-side,rgba(255,255,255,0.09),transparent)]"
       />
       <p className="text-muted-foreground mb-4 text-xs font-medium tracking-[0.18em] uppercase">{eyebrow}</p>
-      <h2
+      <motion.h2
         aria-label={title}
+        variants={headingVariants}
+        initial={reduce ? false : 'hidden'}
+        whileInView="shown"
+        viewport={{ once: true, margin: '0px 0px -15% 0px' }}
         className="text-foreground max-w-3xl text-4xl font-semibold tracking-tight text-balance md:text-6xl"
       >
-        {reduce
-          ? title
-          : words.map((w, i) => (
-              // plain spaces between inline-block words keep text-balance working
-              <Fragment key={i}>
-                {i > 0 && ' '}
-                <Word progress={scrollYProgress} from={(i / words.length) * 0.8} to={((i + 1) / words.length) * 0.8}>
-                  {w}
-                </Word>
-              </Fragment>
-            ))}
-      </h2>
+        {words.map((w, i) => (
+          // plain spaces between inline-block words keep text-balance working
+          <Fragment key={i}>
+            {i > 0 && ' '}
+            <motion.span aria-hidden="true" variants={wordVariants} className="inline-block">
+              {w}
+            </motion.span>
+          </Fragment>
+        ))}
+      </motion.h2>
       {lede && (
         <motion.p
-          style={reduce ? undefined : { opacity: ledeOpacity }}
+          initial={reduce ? false : { opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '0px 0px -15% 0px' }}
+          transition={{ duration: 0.8, delay: 0.07 * words.length + 0.1, ease: EASE }}
           className="text-muted-foreground mt-5 max-w-2xl text-base text-pretty md:text-lg"
         >
           {lede}
