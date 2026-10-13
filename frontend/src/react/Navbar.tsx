@@ -39,7 +39,7 @@ export default function Navbar() {
         scrolled && 'bg-background/70 border-border backdrop-blur-md',
       )}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6 md:px-8">
+      <div className="flex h-16 w-full items-center justify-between px-5 md:px-8">
         <Link to="/" aria-label="Lumen 首页" className="flex items-center gap-2.5">
           <Mark />
           <span className="text-foreground text-lg font-semibold tracking-tight">Lumen</span>
