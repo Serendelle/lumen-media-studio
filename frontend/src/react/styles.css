@@ -112,3 +112,11 @@
   max-width: 100%;
   height: auto;
 }
+
+/* film grain drift (landing overlay) */
+@keyframes lumen-grain {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-4%, 3%); }
+  50% { transform: translate(3%, -5%); }
+  75% { transform: translate(-2%, 4%); }
+}

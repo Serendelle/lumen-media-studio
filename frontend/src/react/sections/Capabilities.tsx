@@ -1,6 +1,6 @@
 import { AudioLines, FileText, Film, ImageIcon, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Reveal, Section, SectionHeading } from './primitives'
+import { ScrollRise, Section, SectionHeading, SpotlightCard } from './primitives'
 
 interface Capability {
   icon: LucideIcon
@@ -43,14 +43,17 @@ export default function Capabilities() {
       />
       <div className="grid gap-4 md:grid-cols-3">
         {CAPABILITIES.map((c, i) => (
-          <Reveal key={c.title} delay={(i % 3) * 0.06} className={cn(c.wide && 'md:col-span-2')}>
-            <article className="bg-card group flex h-full min-h-56 flex-col rounded-2xl border border-white/10 p-7 transition-colors hover:border-white/20">
-              <c.icon aria-hidden="true" className="text-foreground size-6" strokeWidth={1.5} />
-              <h3 className="text-foreground mt-6 text-xl font-semibold tracking-tight">{c.title}</h3>
-              <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{c.desc}</p>
-              <p className="text-muted-foreground/70 mt-auto pt-6 font-mono text-xs">{c.engine}</p>
-            </article>
-          </Reveal>
+          // each column rises from a different depth, so the grid assembles with a layered parallax
+          <ScrollRise key={c.title} from={{ y: 90 + (i % 3) * 60, scale: 0.92 }} end={0.5 - (i % 3) * 0.06} className={cn(c.wide && 'md:col-span-2')}>
+            <SpotlightCard>
+              <article className="flex h-full min-h-56 flex-col p-7">
+                <c.icon aria-hidden="true" className="text-foreground size-6" strokeWidth={1.5} />
+                <h3 className="text-foreground mt-6 text-xl font-semibold tracking-tight">{c.title}</h3>
+                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{c.desc}</p>
+                <p className="text-muted-foreground/70 mt-auto pt-6 font-mono text-xs">{c.engine}</p>
+              </article>
+            </SpotlightCard>
+          </ScrollRise>
         ))}
       </div>
     </Section>

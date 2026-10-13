@@ -1,13 +1,28 @@
+import { useRef } from 'react'
 import { ArrowRight } from 'lucide-react'
+import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import { Link } from '../bridge'
-import { Reveal } from './primitives'
 
 /** Final call to action + footer. */
 export default function Closing() {
+  const ref = useRef<HTMLElement>(null)
+  const reduce = useReducedMotion()
+  // the headline grows into place while a beam of light opens above it
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'center center'] })
+  const scale = useTransform(scrollYProgress, (p) => 0.8 + 0.2 * p)
+  const opacity = useTransform(scrollYProgress, (p) => Math.min(1, p * 1.4))
+  const beam = useTransform(scrollYProgress, (p) => p)
+
   return (
     <>
-      <section className="border-border border-t px-6 py-28 md:py-40">
-        <Reveal className="mx-auto flex max-w-3xl flex-col items-center text-center">
+      <section ref={ref} className="relative isolate overflow-hidden px-6 py-28 md:py-44">
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+        <motion.div
+          aria-hidden="true"
+          style={reduce ? undefined : { opacity: beam, scaleX: beam }}
+          className="pointer-events-none absolute top-0 left-1/2 -z-10 h-[520px] w-[min(1000px,140vw)] -translate-x-1/2 bg-[radial-gradient(ellipse_50%_100%_at_50%_0%,rgba(255,255,255,0.14),transparent_70%)]"
+        />
+        <motion.div style={reduce ? undefined : { scale, opacity }} className="mx-auto flex max-w-3xl flex-col items-center text-center">
           <h2 className="text-foreground text-4xl font-semibold tracking-tight text-balance md:text-6xl">
             Ready when you are.
           </h2>
@@ -19,7 +34,7 @@ export default function Closing() {
             Start working
             <ArrowRight aria-hidden="true" className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" />
           </Link>
-        </Reveal>
+        </motion.div>
       </section>
 
       <footer className="border-border text-muted-foreground border-t px-6 py-10 text-sm md:px-8">
