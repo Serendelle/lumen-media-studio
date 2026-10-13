@@ -1,5 +1,6 @@
 import { MotionConfig } from 'motion/react'
 import Navbar from './Navbar'
+import { useSmoothScroll } from './smooth-scroll'
 import Hero from './sections/Hero'
 import Showcase from './sections/Showcase'
 import Capabilities from './sections/Capabilities'
@@ -13,6 +14,8 @@ import Closing from './sections/Closing'
  * 21st.dev component without touching the rest. Visual slots still to fill are <Placeholder>s.
  */
 export default function LandingApp() {
+  useSmoothScroll()
+
   return (
     <MotionConfig reducedMotion="user">
       <Navbar />

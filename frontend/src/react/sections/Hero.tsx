@@ -1,5 +1,6 @@
 import { ArrowRight, ChevronDown } from 'lucide-react'
-import { motion, useReducedMotion } from 'motion/react'
+import { useRef } from 'react'
+import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import { SonarGrid } from '@/components/ui/sonar-grid'
 import { Link } from '../bridge'
 
@@ -15,8 +16,18 @@ export default function Hero() {
           transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
         }
 
+  // Scroll-out: as the hero leaves, its copy sinks slower than the page, shrinks and fades (parallax).
+  const ref = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] })
+  const y = useTransform(scrollYProgress, [0, 1], [0, 180])
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 0.9])
+  // A function transform on purpose: motion offloads range-mapped opacity to a native ScrollTimeline and
+  // drops the trailing hold keyframe, so the copy faded back in near the end of the range.
+  const opacity = useTransform(scrollYProgress, (p) => Math.max(0, 1 - p / 0.65))
+
   return (
     <SonarGrid
+      ref={ref}
       pingArea={[0.22, 0.18, 0.78, 0.82]}
       className="bg-background flex min-h-[max(560px,100svh)] w-full flex-col"
     >
@@ -25,7 +36,10 @@ export default function Hero() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_34%_30%_at_50%_50%,var(--color-background)_0%,transparent_100%)]"
       />
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-8 py-24 text-center">
+      <motion.div
+        style={reduce ? undefined : { y, scale, opacity }}
+        className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-8 py-24 text-center"
+      >
         <div className="flex max-w-3xl flex-col items-center">
           <motion.p
             {...enter(0)}
@@ -59,7 +73,7 @@ export default function Hero() {
             </Link>
           </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* scroll cue */}
       <a
