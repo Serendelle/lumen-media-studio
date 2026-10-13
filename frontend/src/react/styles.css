@@ -71,7 +71,8 @@
   min-height: 100svh;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans);
+  /* Tailwind's default stack, as on 21st.dev (SF Pro on macOS, Segoe UI on Windows) */
+  font-family: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   line-height: 1.5;
 }
 
