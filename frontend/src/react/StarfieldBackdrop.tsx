@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from 'react'
 import { InteractiveStarfield, usePointer } from '@/components/ui/starfield'
 
 /**
- * Shared starfield behind every section between the hero and the closing call to action.
+ * Shared starfield behind every section after the hero (the closing section fades it out).
  * The stars sit in a viewport-sized sticky layer, so density stays constant however long the page gets
  * (150 stars total, not 150 per screen) and they drift toward the pointer anywhere in the band.
  */

@@ -5,7 +5,7 @@
  *  - prices count up with NumberFlow when first seen, and re-flow on the monthly/annual toggle
  */
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { motion, useInView } from 'motion/react'
+import { motion, useInView, useReducedMotion } from 'motion/react'
 import NumberFlow from '@number-flow/react'
 import confetti from 'canvas-confetti'
 import { Check, Star as StarIcon } from 'lucide-react'
@@ -92,33 +92,119 @@ export function BillingToggle({ monthlyLabel = 'Monthly', yearlyLabel = 'Annual'
   )
 }
 
-export function PricingCard({ plan, index, popularLabel = 'Most Popular' }: { plan: PricingPlan; index: number; popularLabel?: string }) {
+/** "Recommended" badge; while its card is selected the star spins and glows, sparks pop and a sheen sweeps across. */
+function RecommendBadge({ label, active }: { label: string; active: boolean }) {
+  const reduce = useReducedMotion()
+  const live = active && !reduce
+  const SPARKS = [
+    { x: -14, y: -10, d: 0 },
+    { x: 18, y: -12, d: 0.5 },
+    { x: -18, y: 12, d: 1 },
+    { x: 14, y: 14, d: 1.5 },
+  ]
+  return (
+    <div className="absolute top-0 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+      <motion.div
+        animate={
+          live
+            ? { boxShadow: ['0 0 0px rgba(255,255,255,0.0)', '0 0 28px rgba(255,255,255,0.55)', '0 0 0px rgba(255,255,255,0.0)'] }
+            : { boxShadow: '0 0 0px rgba(255,255,255,0)' }
+        }
+        transition={live ? { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
+        className={cn(
+          'relative flex items-center gap-1.5 overflow-hidden rounded-full px-4 py-1.5 transition-colors duration-300',
+          active ? 'bg-primary text-primary-foreground' : 'bg-white/10 text-muted-foreground',
+        )}
+      >
+        <span className="relative grid size-4 place-items-center">
+          <motion.span
+            animate={live ? { rotate: 360, scale: [1, 1.25, 1] } : { rotate: 0, scale: 1 }}
+            transition={live ? { rotate: { duration: 4, repeat: Infinity, ease: 'linear' }, scale: { duration: 1.2, repeat: Infinity } } : { duration: 0.3 }}
+            className="grid place-items-center"
+          >
+            <StarIcon className="size-4 fill-current" />
+          </motion.span>
+          {/* sparks popping around the star */}
+          {live &&
+            SPARKS.map((p, i) => (
+              <motion.span
+                key={i}
+                aria-hidden="true"
+                className="bg-primary-foreground absolute size-1 rounded-full"
+                initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                animate={{ x: p.x, y: p.y, opacity: [0, 1, 0], scale: [0, 1, 0] }}
+                transition={{ duration: 1.2, delay: p.d, repeat: Infinity, repeatDelay: 0.8, ease: 'easeOut' }}
+              />
+            ))}
+        </span>
+        <span className="text-sm font-semibold whitespace-nowrap">{label}</span>
+        {/* sheen sweeping across the pill */}
+        {live && (
+          <motion.span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 w-10 -skew-x-12 bg-gradient-to-r from-transparent via-white/70 to-transparent mix-blend-overlay"
+            initial={{ left: '-30%' }}
+            animate={{ left: '130%' }}
+            transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 1.4, ease: 'easeInOut' }}
+          />
+        )}
+      </motion.div>
+    </div>
+  )
+}
+
+/**
+ * A plan card. The selected card lights up (white border, glow, lifted, solid button); clicking any card
+ * selects it. `isPopular` only decides which card carries the recommended badge.
+ */
+export function PricingCard({
+  plan,
+  index,
+  selected,
+  onSelect,
+  popularLabel = 'Most Popular',
+}: {
+  plan: PricingPlan
+  index: number
+  selected: boolean
+  onSelect: () => void
+  popularLabel?: string
+}) {
   const { isMonthly } = useContext(BillingContext)
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const ref = useRef<HTMLDivElement>(null)
   const inView = useInView(ref, { once: true, margin: '-80px' })
+  // stagger only the first entrance; selection changes afterwards respond immediately
+  const [entered, setEntered] = useState(false)
   const price = isMonthly ? plan.monthlyPrice : plan.yearlyPrice
 
   return (
     <motion.div
       ref={ref}
+      onAnimationComplete={() => setEntered(true)}
+      role="radio"
+      aria-checked={selected}
+      aria-label={plan.name}
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
       initial={{ y: 50, opacity: 0 }}
-      whileInView={{ y: plan.isPopular && isDesktop ? -20 : 0, opacity: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6, type: 'spring', stiffness: 100, damping: 20, delay: index * 0.15 }}
+      animate={inView ? { y: selected && isDesktop ? -20 : 0, opacity: 1 } : undefined}
+      transition={{ type: 'spring', stiffness: 160, damping: 22, delay: entered ? 0 : index * 0.15 }}
       className={cn(
-        'bg-background/70 relative flex flex-col rounded-2xl p-8 backdrop-blur-sm',
-        plan.isPopular ? 'border-primary border-2 shadow-[0_0_80px_-20px_rgba(255,255,255,0.25)]' : 'border-border border',
+        'bg-background/70 relative flex cursor-pointer flex-col rounded-2xl border-2 p-8 backdrop-blur-sm outline-none',
+        'transition-[border-color,box-shadow] duration-300 focus-visible:ring-2 focus-visible:ring-white/40',
+        selected
+          ? 'border-white shadow-[0_0_80px_-20px_rgba(255,255,255,0.3)]'
+          : 'border-white/10 hover:border-white/30',
       )}
     >
-      {plan.isPopular && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div className="bg-primary flex items-center gap-1.5 rounded-full px-4 py-1.5">
-            <StarIcon className="text-primary-foreground size-4 fill-current" />
-            <span className="text-primary-foreground text-sm font-semibold whitespace-nowrap">{popularLabel}</span>
-          </div>
-        </div>
-      )}
+      {plan.isPopular && <RecommendBadge label={popularLabel} active={selected} />}
       <div className="flex flex-1 flex-col text-center">
         <h3 className="text-foreground text-xl font-semibold">{plan.name}</h3>
         <p className="text-muted-foreground mt-2 text-sm">{plan.description}</p>
@@ -139,7 +225,7 @@ export function PricingCard({ plan, index, popularLabel = 'Most Popular' }: { pl
         <ul role="list" className="text-muted-foreground mt-8 space-y-3 text-left text-sm leading-6">
           {plan.features.map((feature) => (
             <li key={feature} className="flex gap-x-3">
-              <Check className="text-primary h-6 w-5 flex-none" aria-hidden="true" />
+              <Check className={cn('h-6 w-5 flex-none transition-colors', selected ? 'text-primary' : 'text-muted-foreground')} aria-hidden="true" />
               {feature}
             </li>
           ))}
@@ -149,10 +235,10 @@ export function PricingCard({ plan, index, popularLabel = 'Most Popular' }: { pl
           <Link
             to={plan.href}
             className={cn(
-              'inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-sm font-medium whitespace-nowrap transition-colors',
-              plan.isPopular
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                : 'border-input bg-background hover:bg-accent hover:text-accent-foreground border',
+              'inline-flex h-11 w-full items-center justify-center rounded-full border px-8 text-sm font-medium whitespace-nowrap transition-colors duration-300',
+              selected
+                ? 'bg-primary text-primary-foreground border-transparent hover:bg-primary/90'
+                : 'border-input bg-background hover:bg-accent hover:text-accent-foreground',
             )}
           >
             {plan.buttonText}

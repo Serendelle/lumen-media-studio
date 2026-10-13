@@ -3,13 +3,15 @@ import { BillingContext, BillingToggle, PricingCard, type PricingPlan } from '@/
 import { useBridge } from '../bridge'
 import { SectionHeading } from './primitives'
 
-const PLUS_MONTHLY = 9.9
-const PLUS_YEARLY = Math.round(PLUS_MONTHLY * 11 * 100) / 100 // a year for the price of 11 months: ¥108.9
+const PLUS_MONTHLY = 14
+const PLUS_YEARLY = 147
+const YEARLY_SAVING = PLUS_MONTHLY * 12 - PLUS_YEARLY // ¥21 against twelve monthly payments
 
 /** Free vs Plus — the only difference is smart mode (the AI agents). The starfield comes from LandingApp. */
 export default function Pricing() {
   const { isAuthenticated } = useBridge()
   const [isMonthly, setIsMonthly] = useState(true)
+  const [selected, setSelected] = useState('Plus')
 
   // no payment flow exists yet: both buttons lead into the app (signed-in users go straight to the studio)
   const plans: PricingPlan[] = [
@@ -30,7 +32,7 @@ export default function Pricing() {
       yearlyPrice: PLUS_YEARLY,
       description: '加上智能模式，一句话交给 AI。',
       monthlyNote: '按月付费',
-      yearlyNote: `按年付费，相当于每月约 ¥${(PLUS_YEARLY / 12).toFixed(1)}，省一个月`,
+      yearlyNote: `按年付费，相当于每月 ¥${(PLUS_YEARLY / 12).toFixed(2)}，省 ¥${YEARLY_SAVING}`,
       features: ['包含 Free 的全部功能', '智能模式：用一句话描述想要的结果', '四个 Agent 理解、规划、执行、审核', '执行前计划由你确认', '完成后自动质量审核'],
       buttonText: '升级 Plus',
       href: isAuthenticated ? '/studio?mode=ai' : '/register',
@@ -44,10 +46,17 @@ export default function Pricing() {
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
         <div className="relative mx-auto w-full max-w-4xl">
           <SectionHeading eyebrow="Pricing" title="Simple, honest pricing." lede="两个方案，区别只有一个：要不要 AI。" />
-          <BillingToggle monthlyLabel="月付" yearlyLabel="年付" yearlyBadge="（省一个月）" />
-          <div className="mt-14 grid grid-cols-1 items-start gap-8 md:grid-cols-2">
+          <BillingToggle monthlyLabel="月付" yearlyLabel="年付" yearlyBadge={`（省 ¥${YEARLY_SAVING}）`} />
+          <div role="radiogroup" aria-label="选择方案" className="mt-14 grid grid-cols-1 items-start gap-8 md:grid-cols-2">
             {plans.map((plan, i) => (
-              <PricingCard key={plan.name} plan={plan} index={i} popularLabel="推荐" />
+              <PricingCard
+                key={plan.name}
+                plan={plan}
+                index={i}
+                selected={selected === plan.name}
+                onSelect={() => setSelected(plan.name)}
+                popularLabel="推荐"
+              />
             ))}
           </div>
         </div>

@@ -8,7 +8,7 @@ import Modes from './sections/Modes'
 import Workflow from './sections/Workflow'
 import Trust from './sections/Trust'
 import Pricing from './sections/Pricing'
-import Closing from './sections/Closing'
+import Closing, { Footer } from './sections/Closing'
 import StarfieldBackdrop from './StarfieldBackdrop'
 
 // fractal-noise tile for the film-grain overlay
@@ -35,9 +35,10 @@ export default function LandingApp() {
           <Workflow />
           <Trust />
           <Pricing />
+          <Closing />
         </StarfieldBackdrop>
       </main>
-      <Closing />
+      <Footer />
       {/* film grain over the whole page: keeps the pure black from looking flat */}
       <div
         aria-hidden="true"
