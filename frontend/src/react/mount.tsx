@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import '@fontsource-variable/inter'
 import './styles.css'
 import { BridgeContext, type LandingBridge } from './bridge'
 import LandingApp from './LandingApp'

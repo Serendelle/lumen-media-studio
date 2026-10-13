@@ -1,71 +1,30 @@
-import { ArrowRight } from 'lucide-react'
-import { motion, useReducedMotion } from 'motion/react'
-import { SonarGrid } from '@/components/ui/sonar-grid'
-import { Link } from './bridge'
+import { MotionConfig } from 'motion/react'
 import Navbar from './Navbar'
+import Hero from './sections/Hero'
+import Showcase from './sections/Showcase'
+import Capabilities from './sections/Capabilities'
+import Modes from './sections/Modes'
+import Workflow from './sections/Workflow'
+import Trust from './sections/Trust'
+import Closing from './sections/Closing'
 
-/** Lumen landing — hero built on the 21st.dev SonarGrid. More sections go below the hero. */
+/**
+ * Lumen landing page. Each section is its own file under ./sections, so any one can be swapped for a
+ * 21st.dev component without touching the rest. Visual slots still to fill are <Placeholder>s.
+ */
 export default function LandingApp() {
-  const reduce = useReducedMotion()
-  const enter = (delay: number) =>
-    reduce
-      ? {}
-      : {
-          initial: { opacity: 0, y: 14, filter: 'blur(6px)' },
-          animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
-          transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
-        }
-
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       <Navbar />
       <main id="main">
-        <SonarGrid
-          pingArea={[0.22, 0.18, 0.78, 0.82]}
-          className="bg-background flex min-h-[max(560px,100svh)] w-full flex-col"
-        >
-          {/* A soft wash behind the copy keeps it legible while rings pass underneath. */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_34%_30%_at_50%_50%,var(--color-background)_0%,transparent_100%)]"
-          />
-          <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-8 py-24 text-center">
-            <div className="flex max-w-3xl flex-col items-center">
-              <motion.p
-                {...enter(0)}
-                className="text-muted-foreground border-border mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium"
-              >
-                <span aria-hidden="true" className="bg-primary size-1.5 rounded-full" />
-                AI media studio for creators
-              </motion.p>
-              <motion.h1
-                {...enter(0.08)}
-                className="text-foreground text-5xl font-semibold tracking-tight text-balance sm:text-6xl md:text-7xl"
-              >
-                Every frame,
-                <br />
-                in its best light.
-              </motion.h1>
-              <motion.p {...enter(0.16)} className="text-muted-foreground mt-6 max-w-xl text-base text-pretty sm:text-lg">
-                压缩、转码、提取音轨、清理隐私信息——用专业参数精确掌控，或者直接说出你的想法，让 AI 规划、确认、执行。
-              </motion.p>
-              <motion.div {...enter(0.24)} className="mt-9 flex items-center justify-center">
-                {/* /studio is auth-guarded: signed-out visitors are sent to login and returned here afterwards */}
-                <Link
-                  to="/studio"
-                  className="group bg-primary text-primary-foreground focus-visible:ring-ring/50 inline-flex h-11 cursor-pointer items-center gap-2 rounded-full px-6 text-sm font-medium shadow-sm transition-[transform,box-shadow] duration-200 outline-none hover:shadow-md focus-visible:ring-[3px] active:scale-[0.98]"
-                >
-                  Start working
-                  <ArrowRight
-                    aria-hidden="true"
-                    className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
-                  />
-                </Link>
-              </motion.div>
-            </div>
-        </div>
-      </SonarGrid>
-    </main>
-    </>
+        <Hero />
+        <Showcase />
+        <Capabilities />
+        <Modes />
+        <Workflow />
+        <Trust />
+      </main>
+      <Closing />
+    </MotionConfig>
   )
 }

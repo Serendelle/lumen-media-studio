@@ -21,6 +21,13 @@ function Mark() {
   )
 }
 
+const SECTIONS = [
+  { href: '#product', label: '产品' },
+  { href: '#features', label: '能力' },
+  { href: '#modes', label: '两种模式' },
+  { href: '#workflow', label: '智能工作流' },
+]
+
 export default function Navbar() {
   const { isAuthenticated } = useBridge()
   const [scrolled, setScrolled] = useState(false)
@@ -39,12 +46,20 @@ export default function Navbar() {
         scrolled && 'bg-background/70 border-border backdrop-blur-md',
       )}
     >
-      <div className="flex h-16 w-full items-center justify-between px-5 md:px-8">
+      <div className="relative flex h-16 w-full items-center justify-between px-5 md:px-8">
         <Link to="/" aria-label="Lumen 首页" className="flex items-center gap-2.5">
           <Mark />
           <span className="text-foreground text-lg font-semibold tracking-tight">Lumen</span>
           <span className="text-muted-foreground hidden text-xs tracking-[0.2em] sm:inline">流明智媒</span>
         </Link>
+
+        <nav aria-label="页面导航" className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 md:flex">
+          {SECTIONS.map((s) => (
+            <a key={s.href} href={s.href} className="text-muted-foreground hover:text-foreground text-sm transition-colors">
+              {s.label}
+            </a>
+          ))}
+        </nav>
 
         <nav aria-label="账户" className="flex items-center gap-2">
           {isAuthenticated ? (
