@@ -5,7 +5,7 @@
  *  - prices count up with NumberFlow when first seen, and re-flow on the monthly/annual toggle
  */
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { motion, useInView, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion, useInView, useReducedMotion } from 'motion/react'
 import NumberFlow from '@number-flow/react'
 import confetti from 'canvas-confetti'
 import { Check, Star as StarIcon } from 'lucide-react'
@@ -92,10 +92,10 @@ export function BillingToggle({ monthlyLabel = 'Monthly', yearlyLabel = 'Annual'
   )
 }
 
-/** "Recommended" badge; while its card is selected the star spins and glows, sparks pop and a sheen sweeps across. */
-function RecommendBadge({ label, active }: { label: string; active: boolean }) {
+/** "Recommended" badge, shown only while its card is selected: the star spins and glows, sparks pop, a sheen sweeps. */
+function RecommendBadge({ label }: { label: string }) {
   const reduce = useReducedMotion()
-  const live = active && !reduce
+  const live = !reduce
   const SPARKS = [
     { x: -14, y: -10, d: 0 },
     { x: 18, y: -12, d: 0.5 },
@@ -103,18 +103,17 @@ function RecommendBadge({ label, active }: { label: string; active: boolean }) {
     { x: 14, y: 14, d: 1.5 },
   ]
   return (
-    <div className="absolute top-0 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+    <motion.div
+      className="absolute top-0 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
+      initial={{ opacity: 0, scale: 0.6, y: 8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.6, y: 8 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+    >
       <motion.div
-        animate={
-          live
-            ? { boxShadow: ['0 0 0px rgba(255,255,255,0.0)', '0 0 28px rgba(255,255,255,0.55)', '0 0 0px rgba(255,255,255,0.0)'] }
-            : { boxShadow: '0 0 0px rgba(255,255,255,0)' }
-        }
-        transition={live ? { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
-        className={cn(
-          'relative flex items-center gap-1.5 overflow-hidden rounded-full px-4 py-1.5 transition-colors duration-300',
-          active ? 'bg-primary text-primary-foreground' : 'bg-white/10 text-muted-foreground',
-        )}
+        animate={live ? { boxShadow: ['0 0 0px rgba(255,255,255,0)', '0 0 28px rgba(255,255,255,0.55)', '0 0 0px rgba(255,255,255,0)'] } : undefined}
+        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+        className="bg-primary text-primary-foreground relative flex items-center gap-1.5 overflow-hidden rounded-full px-4 py-1.5"
       >
         <span className="relative grid size-4 place-items-center">
           <motion.span
@@ -149,7 +148,7 @@ function RecommendBadge({ label, active }: { label: string; active: boolean }) {
           />
         )}
       </motion.div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -204,7 +203,7 @@ export function PricingCard({
           : 'border-white/10 hover:border-white/30',
       )}
     >
-      {plan.isPopular && <RecommendBadge label={popularLabel} active={selected} />}
+      <AnimatePresence>{plan.isPopular && selected && <RecommendBadge label={popularLabel} />}</AnimatePresence>
       <div className="flex flex-1 flex-col text-center">
         <h3 className="text-foreground text-xl font-semibold">{plan.name}</h3>
         <p className="text-muted-foreground mt-2 text-sm">{plan.description}</p>

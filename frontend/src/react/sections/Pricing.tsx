@@ -46,7 +46,7 @@ export default function Pricing() {
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
         <div className="relative mx-auto w-full max-w-4xl">
           <SectionHeading eyebrow="Pricing" title="Simple, honest pricing." lede="两个方案，区别只有一个：要不要 AI。" />
-          <BillingToggle monthlyLabel="月付" yearlyLabel="年付" yearlyBadge={`（省 ¥${YEARLY_SAVING}）`} />
+          <BillingToggle monthlyLabel="月付" yearlyLabel="年付" />
           <div role="radiogroup" aria-label="选择方案" className="mt-14 grid grid-cols-1 items-start gap-8 md:grid-cols-2">
             {plans.map((plan, i) => (
               <PricingCard
