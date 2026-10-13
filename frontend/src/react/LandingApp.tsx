@@ -1,59 +1,67 @@
-import { motion } from 'motion/react'
-import { ArrowRight, Sparkles } from 'lucide-react'
-import { Link, useBridge } from './bridge'
+import { ArrowRight } from 'lucide-react'
+import { motion, useReducedMotion } from 'motion/react'
+import { SonarGrid } from '@/components/ui/sonar-grid'
+import { Link } from './bridge'
 
-/**
- * Placeholder React landing page — proves React + Tailwind + motion + lucide all work.
- * Replace the sections with the chosen 21st.dev components.
- */
+/** Lumen landing — hero built on the 21st.dev SonarGrid. More sections go below the hero. */
 export default function LandingApp() {
-  const { isAuthenticated } = useBridge()
+  const reduce = useReducedMotion()
+  const enter = (delay: number) =>
+    reduce
+      ? {}
+      : {
+          initial: { opacity: 0, y: 14, filter: 'blur(6px)' },
+          animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+          transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
+        }
 
   return (
-    <main id="main" className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 text-center">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,rgba(255,255,255,0.12),transparent_70%)]" />
-
-      <motion.span
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="mb-6 inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
+    <main id="main">
+      <SonarGrid
+        pingArea={[0.22, 0.18, 0.78, 0.82]}
+        className="bg-background flex min-h-[max(560px,100svh)] w-full flex-col"
       >
-        <Sparkles className="size-3.5" /> React 首页预览 · 框架已就绪
-      </motion.span>
-
-      <motion.h1
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.1 }}
-        className="max-w-3xl text-5xl font-semibold tracking-tight md:text-7xl"
-      >
-        让每一帧，都恰到好处。
-      </motion.h1>
-
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.8, delay: 0.3 }}
-        className="mt-6 max-w-xl text-base text-muted-foreground md:text-lg"
-      >
-        这里将替换为从 21st.dev 挑选的组件。
-      </motion.p>
-
-      <div className="mt-10 flex gap-3">
-        <Link
-          to={isAuthenticated ? '/studio' : '/register'}
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-        >
-          {isAuthenticated ? '进入工作台' : '免费开始'} <ArrowRight className="size-4" />
-        </Link>
-        <Link
-          to="/"
-          className="inline-flex h-11 items-center rounded-full border border-border px-6 text-sm transition hover:bg-secondary"
-        >
-          查看旧版首页
-        </Link>
-      </div>
+        {/* A soft wash behind the copy keeps it legible while rings pass underneath. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_34%_30%_at_50%_50%,var(--color-background)_0%,transparent_100%)]"
+        />
+        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-8 py-24 text-center">
+          <div className="flex max-w-3xl flex-col items-center">
+            <motion.p
+              {...enter(0)}
+              className="text-muted-foreground border-border mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium"
+            >
+              <span aria-hidden="true" className="bg-primary size-1.5 rounded-full" />
+              Lumen · 流明智媒
+            </motion.p>
+            <motion.h1
+              {...enter(0.08)}
+              className="text-foreground text-5xl font-semibold tracking-tight text-balance sm:text-6xl md:text-7xl"
+            >
+              让每一帧，
+              <br />
+              都恰到好处。
+            </motion.h1>
+            <motion.p {...enter(0.16)} className="text-muted-foreground mt-6 max-w-xl text-base text-pretty sm:text-lg">
+              压缩、转码、提取音轨、清理隐私信息——用专业参数精确掌控，或者直接说出你的想法，让 AI 规划、确认、执行。
+            </motion.p>
+            <motion.div {...enter(0.24)} className="mt-9 flex items-center justify-center">
+              {/* /studio is auth-guarded: signed-out visitors are sent to login and returned here afterwards */}
+              <Link
+                to="/studio"
+                className="group bg-primary text-primary-foreground focus-visible:ring-ring/50 inline-flex h-11 cursor-pointer items-center gap-2 rounded-full px-6 text-sm font-medium shadow-sm transition-[transform,box-shadow] duration-200 outline-none hover:shadow-md focus-visible:ring-[3px] active:scale-[0.98]"
+              >
+                Start working
+                <ArrowRight
+                  aria-hidden="true"
+                  className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                />
+              </Link>
+            </motion.div>
+          </div>
+        </div>
+      </SonarGrid>
     </main>
   )
 }
