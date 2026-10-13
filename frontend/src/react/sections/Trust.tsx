@@ -11,8 +11,6 @@ const STRENGTHS = [
   { title: '先确认，再执行', desc: 'AI 生成的计划必须经你确认，确认前不会创建任何任务。' },
   { title: '做不到会直说', desc: '目标不可实现时（比如压到 50KB），给出可选方案而不是硬做。' },
   { title: '结果独立核验', desc: '处理后用 ffprobe / ExifTool 再查一遍，交付文件也查位置信息。' },
-  { title: '不怕提示注入', desc: '藏在文件名里的恶意指令会被完全忽略。' },
-  { title: '刷新不丢进度', desc: '中途刷新页面，计划、消息与处理进度都能恢复。' },
 ]
 
 /** Two oversized rows of engine names drifting in opposite directions as the page scrolls. */
