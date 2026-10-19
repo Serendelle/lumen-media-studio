@@ -98,3 +98,49 @@ java -jar backend\target\video-compressor-backend-1.0.0.jar
 ```
 
 在仓库根目录执行最后一条命令，以便读取根目录的 `.env` 并使用 `./data`。
+
+## 8. 数据库与迁移
+
+表结构由 Flyway 的版本化迁移脚本管理，应用启动时自动执行：
+
+| 数据库 | 用途 | 迁移目录 |
+|---|---|---|
+| SQLite | 本地单机开发与演示（默认，`backend/data/app.db`） | `backend/src/main/resources/db/migration/sqlite` |
+| PostgreSQL 16+ | 多人使用或公网部署（`prod` 配置） | `backend/src/main/resources/db/migration/postgresql` |
+
+- 两个目录下同一版本号的脚本必须**等价**：表、列和约束相同。新增表结构时，两边各写一个 `V<n>__<说明>.sql`。
+- 自动化测试会在真实的 PostgreSQL 16 进程上执行生产迁移，并走一遍主要的读写路径（`PostgresProfileTests`，使用嵌入式 PostgreSQL，不需要 Docker），保证线上运行的就是测试过的 SQL。
+- **从旧版本升级**：以前由 `schema.sql` 建的 SQLite 数据库，第一次启动时会被标记为基线 0，再执行 V1 补齐缺少的表，原有数据保留（`SqliteUpgradeTest`）。升级前建议先复制一份 `app.db` 作为备份。
+
+## 9. 生产部署（PostgreSQL）
+
+> 本地 Windows 一键脚本只适合开发和演示。多人同时使用或对公网开放时，请使用 PostgreSQL，并放在 HTTPS 反向代理之后。
+
+1. 准备 PostgreSQL 16+，创建数据库和账号：
+   ```sql
+   CREATE USER lumen WITH PASSWORD '请换成强密码';
+   CREATE DATABASE lumen OWNER lumen;
+   ```
+2. 设置环境变量并以 `prod` 配置启动。数据库的三项和 `APP_JWT_SECRET` 在生产配置中没有默认值，缺任何一个，服务都会拒绝启动：
+   ```bash
+   SPRING_PROFILES_ACTIVE=prod
+   LUMEN_DB_URL=jdbc:postgresql://127.0.0.1:5432/lumen
+   LUMEN_DB_USER=lumen
+   LUMEN_DB_PASSWORD=...
+   APP_JWT_SECRET=...            # 足够长的随机字符串，不要与其它环境共用
+   APP_DATA_DIR=/srv/lumen/data  # 可选，默认 ./data；上传文件、处理结果、交付包都存放在这里
+   ```
+   首次启动时会自动创建全部表。生产配置不会在已有的未知表结构上自动建立基线（`baseline-on-migrate=false`），并且禁用了 `flyway clean`。
+3. **备份**：数据库只保存元数据，文件本身在 `APP_DATA_DIR/storage`，两者需要一起备份：
+   ```bash
+   pg_dump -Fc -U lumen lumen > lumen-$(date +%F).dump
+   tar czf lumen-files-$(date +%F).tgz -C /srv/lumen/data storage
+   ```
+4. **恢复**（先停止服务）：
+   ```bash
+   pg_restore --clean --if-exists -U lumen -d lumen lumen-2026-10-19.dump
+   tar xzf lumen-files-2026-10-19.tgz -C /srv/lumen/data
+   ```
+   恢复后启动服务，Flyway 会核对迁移版本。建议恢复到一台测试机上，确认能登录、能下载历史结果后，才算一次有效的恢复演练。
+
+**目前尚未完成的生产项**：上面的备份/恢复流程还没有在真实的 PostgreSQL 服务器上演练过；病毒扫描（ClamAV）、公开接口限流和数据加密原本是为"公开表单"设计的，材料规范官目前没有对公网开放的入口，等以后加入"投稿自检链接"这类公开入口时再实现。

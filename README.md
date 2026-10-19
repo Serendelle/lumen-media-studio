@@ -38,7 +38,7 @@ powershell -ExecutionPolicy Bypass -File scripts\stop-windows.ps1
 
 ## 技术栈
 
-- 后端：Spring Boot 3.5 · Java 17 · SQLite（JPA）· Spring Security（BCrypt + JWT）· SSE
+- 后端：Spring Boot 3.5 · Java 17 · JPA · Flyway 迁移 · SQLite（本地/演示）/ PostgreSQL 16（生产）· Spring Security（BCrypt + JWT）· SSE
 - 前端：Vue 3 · TypeScript · Vite · Pinia · Vue Router · GSAP
 - AI：DeepSeek（OpenAI 兼容接口，工具调用 + 流式输出），四个 Agent，版本化的 Prompt 与 SKILL
 - 测试：JUnit 5 · MockMvc · jqwik，全部使用真实媒体文件与真实工具
