@@ -10,6 +10,11 @@ import java.util.Optional;
 public interface TaskRepository extends JpaRepository<TaskEntity, String> {
     Optional<TaskEntity> findByIdAndOwnerId(String id, long ownerId);
     Page<TaskEntity> findByOwnerId(long ownerId, Pageable pageable);
+    Page<TaskEntity> findByOwnerIdAndStatusIn(long ownerId, List<String> statuses, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query(
+            "select t.status, count(t) from TaskEntity t where t.ownerId = :ownerId group by t.status")
+    List<Object[]> countByStatus(@org.springframework.data.repository.query.Param("ownerId") long ownerId);
     List<TaskEntity> findByStatusIn(List<String> statuses);
     int countByOwnerIdAndStatusIn(long ownerId, List<String> statuses);
     Optional<TaskEntity> findByOwnerIdAndIdempotencyKey(long ownerId, String idempotencyKey);

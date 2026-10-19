@@ -65,7 +65,7 @@ export default function Navbar() {
         <nav aria-label="账户" className="flex items-center gap-2">
           {isAuthenticated ? (
             <Link
-              to="/studio"
+              to="/workspace"
               className="bg-primary text-primary-foreground inline-flex h-9 items-center rounded-full px-4 text-sm font-medium transition-opacity hover:opacity-90"
             >
               进入工作台

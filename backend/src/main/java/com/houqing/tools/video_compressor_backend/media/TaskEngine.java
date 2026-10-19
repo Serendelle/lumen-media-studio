@@ -334,8 +334,16 @@ public class TaskEngine {
     }
 
     public Page<TaskEntity> list(long ownerId, int page, int size) {
-        return repo.findByOwnerId(ownerId, PageRequest.of(Math.max(0, page), Math.min(100, Math.max(1, size)),
-                Sort.by(Sort.Direction.DESC, "createdAt")));
+        return list(ownerId, null, page, size);
+    }
+
+    /** statuses null/empty = all. */
+    public Page<TaskEntity> list(long ownerId, List<String> statuses, int page, int size) {
+        PageRequest pr = PageRequest.of(Math.max(0, page), Math.min(100, Math.max(1, size)),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+        return statuses == null || statuses.isEmpty()
+                ? repo.findByOwnerId(ownerId, pr)
+                : repo.findByOwnerIdAndStatusIn(ownerId, statuses, pr);
     }
 
     public TaskView toView(TaskEntity t) {
@@ -347,9 +355,14 @@ public class TaskEngine {
                     .orElse(null); // output already expired and purged
         }
         JsonNode result = t.getResultJson() == null ? null : readJson(t.getResultJson());
+        List<TaskView.InputView> ins = readFileIds(t.getInputFiles()).stream()
+                .map(id -> storage.find(t.getOwnerId(), id)
+                        .map(mf -> new TaskView.InputView(id, mf.getOriginalName(), mf.getMediaType()))
+                        .orElse(new TaskView.InputView(id, null, null)))
+                .toList();
         return new TaskView(t.getId(), t.getType(), t.getStatus(), t.getProgress(), t.getStage(), t.getMessage(),
                 t.getErrorCode(), out == null ? null : out.fileId(), t.getOrigin(), t.getAttempt(), out, result,
-                t.getCreatedAt(), t.getStartedAt(), t.getFinishedAt());
+                t.getCreatedAt(), t.getStartedAt(), t.getFinishedAt(), ins);
     }
 
     // ---- maintenance ----

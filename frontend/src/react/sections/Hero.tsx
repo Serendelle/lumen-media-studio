@@ -60,9 +60,9 @@ export default function Hero() {
             压缩、转码、提取音轨、清理隐私信息——用专业参数精确掌控，或者直接说出你的想法，让 AI 规划、确认、执行。
           </motion.p>
           <motion.div {...enter(0.24)} className="mt-9 flex items-center justify-center">
-            {/* /studio is auth-guarded: signed-out visitors are sent to login and returned here afterwards */}
+            {/* /workspace is auth-guarded: signed-out visitors are sent to login and returned here afterwards */}
             <Link
-              to="/studio"
+              to="/workspace"
               className="group bg-primary text-primary-foreground focus-visible:ring-ring/50 inline-flex h-11 cursor-pointer items-center gap-2 rounded-full px-6 text-sm font-medium shadow-sm transition-[transform,box-shadow] duration-200 outline-none hover:shadow-md focus-visible:ring-[3px] active:scale-[0.98]"
             >
               Start working

@@ -40,3 +40,20 @@ export function stageLabel(stage?: string): string {
   if (stage.startsWith('processing')) return stage.replace('processing', '处理')
   return STAGE_LABEL[stage] ?? stage
 }
+
+/** What the user can actually do next for each failure code (shown next to the server's own message). */
+export const ERROR_HINT: Record<string, string> = {
+  TARGET_UNREACHABLE: '目标参数本身无法实现：调大目标体积、降低分辨率或音频码率后重新提交。',
+  MEDIA_UNREADABLE: '文件无法解析，可能已损坏或编码不受支持；换一个导出版本再试。',
+  CAPABILITY_UNSUPPORTED: '该格式不支持此操作，请换用其它输出格式。',
+  TOOL_UNAVAILABLE: '服务器缺少所需的处理工具，请按部署文档安装后重试。',
+  PROCESS_TIMEOUT: '处理超时：可先压缩或截短源文件，或在服务器上调大任务超时时间。',
+  PROCESS_FAILED: '处理工具报错退出，可以重试；若反复失败，请用追踪号查看服务器日志。',
+  INTERRUPTED: '服务重启打断了任务，直接重试即可。',
+  INSUFFICIENT_DISK: '服务器磁盘空间不足，清理文件后重试。',
+  QUEUE_FULL: '处理队列已满，稍后重试。',
+  TOO_MANY_TASKS: '进行中的任务过多，等已有任务完成后再提交。',
+  NOT_FOUND: '输入文件已过期或被删除，请重新上传后提交新任务。',
+  AI_UNAVAILABLE: 'AI 服务未配置或暂不可用，可改用专业模式完成同样的处理。',
+  CANCELLED: '任务已被取消，可以重试。',
+}

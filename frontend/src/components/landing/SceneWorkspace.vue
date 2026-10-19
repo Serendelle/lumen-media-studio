@@ -12,7 +12,7 @@ const root = ref<HTMLElement | null>(null)
 onMounted(() => void system.load())
 
 const entry = (mode: 'pro' | 'ai') =>
-  auth.isAuthenticated ? { path: '/studio', query: { mode } } : { path: '/register', query: { redirect: `/studio?mode=${mode}` } }
+  auth.isAuthenticated ? { path: '/workspace/media', query: { mode } } : { path: '/register', query: { redirect: `/workspace/media?mode=${mode}` } }
 
 /** Real engine status from /api/system/capabilities — not decoration. */
 const engines = computed(() => {

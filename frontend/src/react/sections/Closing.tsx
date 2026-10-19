@@ -32,7 +32,7 @@ export default function Closing() {
         </h2>
         <p className="text-muted-foreground mt-5 text-base md:text-lg">拖入一个文件，或者说一句话，就可以开始。</p>
         <Link
-          to="/studio"
+          to="/workspace"
           className="group bg-primary text-primary-foreground mt-9 inline-flex h-11 items-center gap-2 rounded-full px-6 text-sm font-medium transition-[transform,box-shadow] duration-200 hover:shadow-md active:scale-[0.98]"
         >
           Start working
@@ -53,7 +53,7 @@ export function Footer() {
         <nav aria-label="页脚" className="flex gap-6">
           <Link to="/login" className="hover:text-foreground transition-colors">登录</Link>
           <Link to="/register" className="hover:text-foreground transition-colors">注册</Link>
-          <Link to="/studio" className="hover:text-foreground transition-colors">工作台</Link>
+          <Link to="/workspace" className="hover:text-foreground transition-colors">工作台</Link>
         </nav>
         <p>© {new Date().getFullYear()} Lumen</p>
       </div>

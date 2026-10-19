@@ -77,7 +77,7 @@ useGsap(({ reduced }) => {
         让 AI 规划、确认、执行。两种方式，同一套真实的处理引擎。
       </p>
       <div class="actions" data-reveal>
-        <RouterLink class="btn" :to="auth.isAuthenticated ? '/studio' : '/register'">开始创作</RouterLink>
+        <RouterLink class="btn" :to="auth.isAuthenticated ? '/workspace' : '/register'">开始创作</RouterLink>
         <a class="btn btn--ghost" href="#capabilities">看看它能做什么</a>
       </div>
       </div>

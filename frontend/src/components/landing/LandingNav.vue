@@ -24,7 +24,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
       </nav>
       <div class="cta">
         <template v-if="auth.isAuthenticated">
-          <RouterLink class="btn btn--sm" to="/studio">进入工作台</RouterLink>
+          <RouterLink class="btn btn--sm" to="/workspace">进入工作台</RouterLink>
         </template>
         <template v-else>
           <RouterLink class="btn btn--sm btn--ghost login" to="/login">登录</RouterLink>

@@ -1,23 +1,14 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
-import BrandMark from '@/components/common/BrandMark.vue'
+import { computed, defineAsyncComponent } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import TaskTray from '@/components/studio/TaskTray.vue'
 import AiStudio from '@/components/studio/AiStudio.vue'
 import Icon from '@/components/common/Icon.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useLibraryStore } from '@/stores/library'
 import { useSystemStore } from '@/stores/system'
-import { useTasksStore } from '@/stores/tasks'
-import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
-const auth = useAuthStore()
-const lib = useLibraryStore()
 const system = useSystemStore()
-const tasks = useTasksStore()
-const toast = useToast()
 
 const TOOLS = [
   { id: 'compress', icon: 'compress', label: '视频压缩', group: '视频', feature: 'video.compress', comp: defineAsyncComponent(() => import('@/components/studio/tools/CompressTool.vue')) },
@@ -40,26 +31,12 @@ const toolId = computed({
 })
 const tool = computed(() => TOOLS.find((t) => t.id === toolId.value)!)
 
-onMounted(async () => {
-  await Promise.all([
-    system.load(),
-    lib.refresh(),
-    tasks.restore().catch((e) => toast.error(`任务列表加载失败：${(e as Error).message}`)),
-  ])
-})
-onBeforeUnmount(() => tasks.stopAll())
-
-function logout() {
-  tasks.reset()
-  auth.logout()
-  void router.replace('/')
-}
 </script>
 
 <template>
   <div class="studio">
     <header class="bar">
-      <RouterLink to="/" class="home" aria-label="返回首页"><BrandMark compact /></RouterLink>
+      <h1 class="title">媒体工作台</h1>
       <div class="modes" role="tablist" aria-label="工作模式">
         <button type="button" role="tab" :aria-selected="mode === 'pro'" :class="{ on: mode === 'pro' }" @click="mode = 'pro'">
           专业模式
@@ -69,13 +46,8 @@ function logout() {
         </button>
         <span class="glider" :style="{ transform: mode === 'ai' ? 'translateX(100%)' : 'none' }" aria-hidden="true" />
       </div>
-      <div class="user">
-        <span class="name">{{ auth.user?.displayName ?? auth.user?.username }}</span>
-        <button type="button" class="btn btn--sm btn--ghost" @click="logout">退出</button>
-      </div>
+      <span class="hint">{{ mode === 'pro' ? '精确掌控每个参数' : '一句话描述需求，确认后执行' }}</span>
     </header>
-
-    <p v-if="system.error" class="offline" role="alert">无法连接后端服务：{{ system.error }}。请确认后端已启动（默认端口 8080）。</p>
 
     <div class="layout" :class="`m-${mode}`">
       <nav v-if="mode === 'pro'" class="rail" aria-label="处理工具">
@@ -103,29 +75,21 @@ function logout() {
 </template>
 
 <style scoped>
-.studio {
-  min-height: 100svh;
-  background:
-    radial-gradient(50% 40% at 100% 0%, rgba(220, 232, 240, 0.8), transparent 70%),
-    radial-gradient(40% 40% at 0% 100%, rgba(217, 237, 228, 0.6), transparent 70%),
-    var(--cream);
-}
 .bar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
   gap: var(--sp-4);
-  padding: 12px var(--gutter);
-  background: rgba(247, 247, 242, 0.88);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: var(--sp-5) var(--gutter) 0;
 }
-.home {
-  text-decoration: none;
-  justify-self: start;
+.title {
+  font-size: var(--fs-xl);
+}
+.hint {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
 }
 .modes {
   position: relative;
@@ -160,22 +124,6 @@ function logout() {
   background: var(--ink);
   transition: transform var(--t-med) var(--ease-out);
 }
-.user {
-  justify-self: end;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-}
-.offline {
-  margin: 12px var(--gutter) 0;
-  padding: 10px 14px;
-  border-radius: var(--r-sm);
-  background: var(--danger-soft);
-  color: var(--danger);
-  font-size: var(--fs-sm);
-}
 .layout {
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr) 340px;
@@ -190,7 +138,7 @@ function logout() {
 }
 .rail {
   position: sticky;
-  top: 84px;
+  top: 76px;
   display: grid;
   gap: 2px;
 }
@@ -262,7 +210,7 @@ function logout() {
 }
 .tray {
   position: sticky;
-  top: 84px;
+  top: 76px;
   max-height: calc(100vh - 100px);
   overflow: auto;
   padding-right: 4px;
@@ -282,14 +230,7 @@ function logout() {
   }
 }
 @media (max-width: 760px) {
-  .bar {
-    grid-template-columns: auto 1fr;
-  }
-  .modes {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-  .user .name {
+  .hint {
     display: none;
   }
   .layout {

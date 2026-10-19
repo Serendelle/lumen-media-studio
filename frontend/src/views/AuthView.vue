@@ -45,7 +45,7 @@ async function submit() {
   try {
     if (isRegister.value) await auth.register(form.username.trim(), form.password, form.displayName.trim() || undefined)
     else await auth.login(form.username.trim(), form.password)
-    const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') ? route.query.redirect : '/studio'
+    const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') ? route.query.redirect : '/workspace'
     await router.replace(redirect)
   } catch (e) {
     if (e instanceof ApiError) {

@@ -10,11 +10,18 @@ const router = createRouter({
     { path: '/login', name: 'login', component: () => import('@/views/AuthView.vue'), meta: { title: '登录 · Lumen', guestOnly: true } },
     { path: '/register', name: 'register', component: () => import('@/views/AuthView.vue'), meta: { title: '注册 · Lumen', guestOnly: true } },
     {
-      path: '/studio',
-      name: 'studio',
-      component: () => import('@/views/StudioView.vue'),
-      meta: { title: '工作台 · Lumen', requiresAuth: true },
+      path: '/workspace',
+      component: () => import('@/layouts/WorkspaceLayout.vue'),
+      meta: { requiresAuth: true },
+      children: [
+        { path: '', name: 'workspace', component: () => import('@/views/WorkspaceHomeView.vue'), meta: { title: '概览 · Lumen' } },
+        { path: 'media', name: 'media', component: () => import('@/views/MediaWorkspaceView.vue'), meta: { title: '媒体工作台 · Lumen' } },
+        { path: 'files', name: 'files', component: () => import('@/views/FileLibraryView.vue'), meta: { title: '我的文件 · Lumen' } },
+        { path: 'tasks', name: 'tasks', component: () => import('@/views/TaskCenterView.vue'), meta: { title: '任务中心 · Lumen' } },
+      ],
     },
+    // legacy entry: old links (/studio?mode=ai&tool=audio) keep working and keep their intent
+    { path: '/studio', name: 'studio', redirect: (to) => ({ path: '/workspace/media', query: to.query, hash: to.hash }) },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/NotFoundView.vue'), meta: { title: '未找到 · Lumen' } },
   ],
   scrollBehavior(to, _from, saved) {
@@ -30,7 +37,7 @@ router.beforeEach(async (to) => {
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
-  if (to.meta.guestOnly && auth.isAuthenticated) return { name: 'studio' }
+  if (to.meta.guestOnly && auth.isAuthenticated) return { name: 'workspace' }
 })
 
 router.afterEach((to) => {

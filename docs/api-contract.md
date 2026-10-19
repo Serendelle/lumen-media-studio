@@ -46,9 +46,12 @@
   "output": { "fileId": "f3a9…", "filename": "demo_compressed.mp4", "sizeBytes": 1520331, "mediaType": "VIDEO", "downloadUrl": "/api/files/f3a9…/content" },
   "result": { "originalSize": 4631567, "outputSize": 1520331, "savedPercent": 67.2 },
   "origin": "PRO | AI", "attempt": 1,
-  "createdAt": 1791727183019, "startedAt": 1791727183023, "finishedAt": 1791727190000
+  "createdAt": 1791727183019, "startedAt": 1791727183023, "finishedAt": 1791727190000,
+  "inputs": [{ "fileId": "6e13…", "filename": "样例课程.mp4", "mediaType": "VIDEO" }]
 }
 ```
+
+- `inputs`（V2 新增）：按提交顺序列出输入文件；文件过期或被删除后只保留 `fileId`，不再返回 `filename`。
 
 - `progress` 来自 FFmpeg `-progress` 输出中的真实时间位置（两遍编码时，第一遍映射到 0–45%，第二遍映射到 45–100%）；无法给出百分比的工具只报告阶段（`stage`）。
 - 与原契约的差异：状态值由 `PENDING/PROCESSING/COMPLETED/FAILED` 改为上表的五种状态（已经过产品确认）。
@@ -156,7 +159,7 @@
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | POST | `/` | `{type, inputs[fileId], params}` 直接创建任务（`type` 见 `GET /types`） |
-| GET | `/?page&size` | 当前用户的任务（按时间倒序） |
+| GET | `/?page&size&status` | 当前用户的任务（按时间倒序）；`status` 可选，逗号分隔，如 `QUEUED,RUNNING`，未知状态返回 400 `VALIDATION_FAILED` |
 | GET | `/{id}` | TaskView |
 | POST | `/{id}/cancel` | QUEUED 状态立即取消；RUNNING 状态结束整个进程树。已结束的任务返回 409 |
 | POST | `/{id}/retry` | 仅限 FAILED/CANCELLED 状态，`attempt + 1` |
@@ -167,7 +170,13 @@
 - `GET /api/system/capabilities`（公开）：工具可用性、功能开关、限制参数、AI 是否已配置（只返回布尔值）、元数据能力矩阵
 - `GET /actuator/health`：包含 `mediaTools` 指标（各工具状态与剩余磁盘空间）
 
-## 11. 智能模式 `/api/ai`（新增）
+## 11. 工作台概览 `/api/v2/workspace`（V2）
+
+V2 新业务接口统一放在 `/api/v2` 下，原有 V1 路径保持不变。
+
+- `GET /api/v2/workspace/summary`（需登录）：`{tasksByStatus{QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED}, inputs{count,bytes}, outputs{count,bytes}, nextExpiryAt?, recentTasks[TaskView ×5], recentFiles[FileView ×5]}`。全部数字由数据库按当前用户聚合，不含任何其他用户的数据。
+
+## 12. 智能模式 `/api/ai`（新增）
 
 DeepSeek 只在后端调用，浏览器不会接触到 Key。未配置 Key 时，`POST /messages` 返回 `503 AI_UNAVAILABLE`。
 

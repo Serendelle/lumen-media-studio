@@ -41,8 +41,22 @@ public class TaskController {
     }
 
     @GetMapping
-    public Page<TaskView> list(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        return engine.list(CurrentUser.id(), page, size).map(engine::toView);
+    /** status = optional comma-separated filter, e.g. "QUEUED,RUNNING". */
+    public Page<TaskView> list(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
+                               @RequestParam(required = false) String status) {
+        List<String> statuses = null;
+        if (status != null && !status.isBlank()) {
+            statuses = java.util.Arrays.stream(status.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+            for (String s : statuses) {
+                try {
+                    TaskStatus.valueOf(s);
+                } catch (IllegalArgumentException e) {
+                    throw new com.houqing.tools.video_compressor_backend.common.ApiException(
+                            com.houqing.tools.video_compressor_backend.common.ErrorCode.VALIDATION_FAILED, "未知的任务状态: " + s);
+                }
+            }
+        }
+        return engine.list(CurrentUser.id(), statuses, page, size).map(engine::toView);
     }
 
     @GetMapping("/{id}")

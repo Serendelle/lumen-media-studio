@@ -7,9 +7,11 @@ import type {
   MetadataView,
   Page,
   SystemCapabilities,
+  TaskStatus,
   TaskView,
   Ticket,
   UserView,
+  WorkspaceSummary,
 } from './types'
 
 const withKey = () => ({ headers: { 'Idempotency-Key': idempotencyKey() } })
@@ -19,6 +21,10 @@ export const authApi = {
     postJson<AuthResult>('/api/auth/register', { username, password, displayName }),
   login: (username: string, password: string) => postJson<AuthResult>('/api/auth/login', { username, password }),
   me: () => getJson<UserView>('/api/auth/me'),
+}
+
+export const workspaceApi = {
+  summary: () => getJson<WorkspaceSummary>('/api/v2/workspace/summary'),
 }
 
 export const systemApi = {
@@ -47,7 +53,8 @@ export const filesApi = {
 }
 
 export const tasksApi = {
-  list: (page = 0, size = 30) => getJson<Page<TaskView>>('/api/tasks', { params: { page, size } }),
+  list: (page = 0, size = 30, status?: TaskStatus[]) =>
+    getJson<Page<TaskView>>('/api/tasks', { params: { page, size, status: status?.length ? status.join(',') : undefined } }),
   get: (id: string) => getJson<TaskView>(`/api/tasks/${encodeURIComponent(id)}`),
   cancel: (id: string) => postJson<TaskView>(`/api/tasks/${encodeURIComponent(id)}/cancel`),
   retry: (id: string) => postJson<TaskView>(`/api/tasks/${encodeURIComponent(id)}/retry`),

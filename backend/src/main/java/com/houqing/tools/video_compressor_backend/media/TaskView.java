@@ -21,8 +21,13 @@ public record TaskView(
         JsonNode result,
         long createdAt,
         Long startedAt,
-        Long finishedAt) {
+        Long finishedAt,
+        /** Input files in submission order; filename is null once the file has expired and been purged. */
+        java.util.List<InputView> inputs) {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record OutputView(String fileId, String filename, long sizeBytes, String mediaType, String downloadUrl) {}
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record InputView(String fileId, String filename, String mediaType) {}
 }

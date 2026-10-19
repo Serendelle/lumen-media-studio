@@ -81,6 +81,17 @@ export interface TaskView {
   createdAt: number
   startedAt?: number
   finishedAt?: number
+  /** filename is absent once the input file has expired */
+  inputs?: { fileId: string; filename?: string; mediaType?: MediaKind }[]
+}
+
+export interface WorkspaceSummary {
+  tasksByStatus: Record<TaskStatus, number>
+  inputs: { count: number; bytes: number }
+  outputs: { count: number; bytes: number }
+  nextExpiryAt?: number
+  recentTasks: TaskView[]
+  recentFiles: FileView[]
 }
 
 export interface Page<T> {
