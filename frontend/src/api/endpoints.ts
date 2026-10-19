@@ -5,6 +5,12 @@ import type {
   ConversionMatrix,
   DocumentInspection,
   PdfPagePreview,
+  MaterialSpec,
+  SpecBoard,
+  SpecDraft,
+  SpecItem,
+  SpecProject,
+  SpecProjectSummary,
   FileView,
   MediaCompare,
   MetadataCapability,
@@ -35,6 +41,31 @@ export const documentsApi = {
   convert: (sourceFileId: string, options: Record<string, unknown>) =>
     postJson<{ taskId: string; status: string; statusUrl: string }>(
       '/api/v2/documents/convert', { sourceFileId, targetFormat: 'pdf', options }, withKey()),
+}
+
+const sp = (id: string) => `/api/v2/specs/${encodeURIComponent(id)}`
+
+export const specsApi = {
+  list: () => getJson<{ items: SpecProjectSummary[]; total: number }>('/api/v2/specs', { params: { size: 100 } }),
+  create: (name: string) => postJson<SpecProject>('/api/v2/specs', { name }),
+  get: (id: string) => getJson<SpecProject>(sp(id)),
+  remove: (id: string) => http.delete(sp(id)),
+  extract: (id: string, noticeText: string) => postJson<SpecDraft>(`${sp(id)}/extract`, { noticeText }, { timeout: 180_000 }),
+  saveSpec: async (id: string, spec: MaterialSpec, version: number, noticeText?: string) =>
+    (await http.put<SpecProject>(`${sp(id)}/spec`, { spec, version, noticeText })).data,
+  importRoster: (id: string, fileId: string, headerRow?: number, nameField?: string) =>
+    postJson<SpecProject>(`${sp(id)}/roster`, { fileId, headerRow, nameField }),
+  setTemplates: async (id: string, docxFileId?: string | null, xlsxFileId?: string | null, xlsxHeaderRow?: number | null) =>
+    (await http.put<SpecProject>(`${sp(id)}/templates`, { docxFileId, xlsxFileId, xlsxHeaderRow })).data,
+  board: (id: string) => getJson<SpecBoard>(`${sp(id)}/items`),
+  attach: (id: string, files: { fileId: string; relativePath: string }[]) => postJson<SpecBoard>(`${sp(id)}/items`, { files }),
+  assign: async (id: string, itemId: string, personKey: string | null, slotKey: string | null) =>
+    (await http.patch<SpecItem>(`${sp(id)}/items/${encodeURIComponent(itemId)}`, { personKey, slotKey })).data,
+  removeItem: (id: string, itemId: string) => http.delete(`${sp(id)}/items/${encodeURIComponent(itemId)}`),
+  fix: (id: string, itemIds?: string[]) => postJson<SpecBoard>(`${sp(id)}/fix`, { itemIds }),
+  deliver: (id: string, onlyComplete: boolean, includeOriginals: boolean) =>
+    postJson<{ taskId: string; status: string }>(`${sp(id)}/deliveries`, { onlyComplete, includeOriginals }, withKey()),
+  deliveries: (id: string) => getJson<TaskView[]>(`${sp(id)}/deliveries`),
 }
 
 export const compareApi = {

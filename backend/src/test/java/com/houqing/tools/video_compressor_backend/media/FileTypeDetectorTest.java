@@ -19,6 +19,21 @@ class FileTypeDetectorTest {
     @TempDir Path tmp;
 
     @Test
+    void isoBmffBrandDecidesBetweenMp4AndMov() throws Exception {
+        TestMedia.assumeTools(Tool.FFMPEG);
+        // FFmpeg's default MP4 ("isom" brand) used to be stored as .mov
+        assertThat(detector.detect(TestMedia.get("demo.mp4"), "demo.mp4").ext()).isEqualTo("mp4");
+        java.nio.file.Path mov = TestMedia.DIR.resolve("brand.mov");
+        if (!java.nio.file.Files.exists(mov)) {
+            Process p = new ProcessBuilder(TestMedia.tools().command(Tool.FFMPEG).get(0), "-v", "error", "-y", "-i",
+                    TestMedia.get("demo.mp4").toString(), "-t", "1", "-c", "copy", "-f", "mov", mov.toString()).redirectErrorStream(true).start();
+            p.getInputStream().readAllBytes();
+            assertThat(p.waitFor()).isZero();
+        }
+        assertThat(detector.detect(mov, "x.mp4").ext()).isEqualTo("mov"); // a real QuickTime file stays .mov
+    }
+
+    @Test
     void detectsRealMediaByContent() {
         TestMedia.assumeTools(Tool.FFMPEG, Tool.EXIFTOOL);
         assertThat(detector.detect(TestMedia.get("demo.mp4"), "demo.mp4").kind()).isEqualTo(MediaKind.VIDEO);

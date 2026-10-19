@@ -1,0 +1,80 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
+import { specsApi } from '@/api/endpoints'
+import type { SpecProjectSummary } from '@/api/types'
+import { useToast } from '@/composables/useToast'
+import { relativeTime } from '@/utils/format'
+
+const router = useRouter()
+const toast = useToast()
+const list = ref<SpecProjectSummary[]>([])
+const loading = ref(true)
+const error = ref<string | null>(null)
+const name = ref('')
+const creating = ref(false)
+
+onMounted(async () => {
+  try {
+    list.value = (await specsApi.list()).items
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    loading.value = false
+  }
+})
+
+async function create() {
+  if (name.value.trim().length < 2) return
+  creating.value = true
+  try {
+    const p = await specsApi.create(name.value.trim())
+    void router.push(`/workspace/specs/${p.id}`)
+  } catch (e) {
+    toast.error((e as Error).message)
+  } finally {
+    creating.value = false
+  }
+}
+</script>
+
+<template>
+  <main id="main" class="sl">
+    <header class="head">
+      <h1>材料规范官</h1>
+      <p>收上来的材料乱七八糟？贴入比赛通知，导入名单，把整个文件夹拖进来：系统对照规范逐项检查、自动修正，最后按你的模板生成可直接交付的材料包。</p>
+    </header>
+
+    <form class="card new" @submit.prevent="create">
+      <label for="pn">新建项目</label>
+      <input id="pn" v-model="name" class="input" maxlength="80" placeholder="例如：第三届科普讲解大赛" />
+      <button type="submit" class="btn" :disabled="creating || name.trim().length < 2">创建</button>
+    </form>
+
+    <p v-if="error" class="err" role="alert">{{ error }}</p>
+    <section class="list" :aria-busy="loading">
+      <RouterLink v-for="p in list" :key="p.id" :to="`/workspace/specs/${p.id}`" class="card item">
+        <strong>{{ p.name }}</strong>
+        <span class="meta">{{ p.slots }} 项材料 · {{ p.people }} 人 · {{ p.files }} 个文件</span>
+        <span class="when">{{ relativeTime(p.updatedAt) }}</span>
+      </RouterLink>
+      <p v-if="!loading && !list.length && !error" class="empty">还没有项目。</p>
+    </section>
+  </main>
+</template>
+
+<style scoped>
+.sl { display: grid; gap: var(--sp-4); max-width: 1000px; margin: 0 auto; padding: var(--sp-6) var(--gutter) var(--sp-8); }
+.head h1 { font-size: var(--fs-2xl); }
+.head p { margin-top: 6px; color: var(--text-2); font-size: var(--fs-sm); line-height: 1.7; max-width: 720px; }
+.new { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; padding: var(--sp-4) var(--sp-5); }
+.new label { font-size: var(--fs-sm); }
+.new .input { flex: 1; min-width: 200px; }
+.list { display: grid; gap: var(--sp-2); }
+.item { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: var(--sp-4) var(--sp-5); color: var(--text); text-decoration: none; }
+.item:hover { box-shadow: var(--shadow-2, var(--shadow-1)); }
+.meta { grid-column: 1; font-size: var(--fs-xs); color: var(--text-3); }
+.when { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-size: var(--fs-xs); color: var(--text-3); }
+.empty { padding: var(--sp-6) 0; text-align: center; color: var(--text-3); font-size: var(--fs-sm); }
+.err { color: var(--danger); font-size: var(--fs-sm); }
+</style>

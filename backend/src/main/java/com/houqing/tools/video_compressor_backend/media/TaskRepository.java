@@ -11,6 +11,7 @@ public interface TaskRepository extends JpaRepository<TaskEntity, String> {
     Optional<TaskEntity> findByIdAndOwnerId(String id, long ownerId);
     Page<TaskEntity> findByOwnerId(long ownerId, Pageable pageable);
     Page<TaskEntity> findByOwnerIdAndStatusIn(long ownerId, List<String> statuses, Pageable pageable);
+    List<TaskEntity> findTop50ByOwnerIdAndTypeOrderByCreatedAtDesc(long ownerId, String type);
 
     @org.springframework.data.jpa.repository.Query(
             "select t.status, count(t) from TaskEntity t where t.ownerId = :ownerId group by t.status")

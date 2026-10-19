@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { authApi } from '@/api/endpoints'
-import { tokenStore } from '@/api/http'
+import { ApiError, tokenStore } from '@/api/http'
 import type { UserView } from '@/api/types'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -28,14 +28,24 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /** Validates a stored token once per page load. */
+  /**
+   * Only a 401 means the token is bad. A network error or 5xx (e.g. the backend is restarting) keeps the session
+   * and leaves ready=false, so the next navigation simply tries again instead of silently logging the user out.
+   */
   async function restore() {
     if (ready.value) return
-    try {
-      if (token.value) user.value = await authApi.me()
-    } catch {
-      logout()
-    } finally {
+    if (!token.value) {
       ready.value = true
+      return
+    }
+    try {
+      user.value = await authApi.me()
+      ready.value = true
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        logout()
+        ready.value = true
+      }
     }
   }
 

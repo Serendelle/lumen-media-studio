@@ -167,6 +167,24 @@ public class StorageService {
         return expired.size();
     }
 
+    /**
+     * Files attached to an active project (templates, roster, materials, fixes, deliveries) must outlive the default
+     * 24 h retention; this only ever extends, never shortens, the expiry.
+     */
+    @Transactional
+    public void keepUntil(MediaFile mf, long until) {
+        if (mf.getExpiresAt() >= until) return;
+        mf.setExpiresAt(until);
+        repo.save(mf);
+    }
+
+    /** Back to the default retention counted from now (used when a project lets go of a file). */
+    @Transactional
+    public void releaseRetention(MediaFile mf) {
+        mf.setExpiresAt(System.currentTimeMillis() + Duration.ofHours(Math.max(1, props.retentionHours())).toMillis());
+        repo.save(mf);
+    }
+
     public void deleteFile(MediaFile mf) {
         quietDelete(storageRoot.resolve(mf.getStoredName()));
         deleteWorkDir("doc-preview-" + mf.getId()); // rendered page previews of a PDF

@@ -88,7 +88,25 @@ public class FileTypeDetector {
             throw new ApiException(ErrorCode.UNSUPPORTED_MEDIA, "不支持的文件类型（检测结果：" + mime + "）");
         }
         if ("svg".equals(d.ext())) checkSvg(file);
+        if (d.kind() == MediaKind.VIDEO && "mov".equals(d.ext())) d = refineIsoBmff(file, d);
         return d;
+    }
+
+    /**
+     * Tika reports every ISO-BMFF file with an unknown brand as QuickTime, so plain MP4s written by FFmpeg
+     * ("isom") came out as .mov. The ftyp major brand decides: only "qt  " is QuickTime.
+     */
+    static Detected refineIsoBmff(Path file, Detected d) {
+        try (InputStream in = Files.newInputStream(file)) {
+            byte[] h = in.readNBytes(12);
+            if (h.length < 12 || !new String(h, 4, 4, StandardCharsets.ISO_8859_1).equals("ftyp")) return d;
+            String brand = new String(h, 8, 4, StandardCharsets.ISO_8859_1);
+            if (brand.equals("qt  ")) return d;
+            if (brand.startsWith("M4V")) return ALLOWED.get("video/x-m4v");
+            return ALLOWED.get("video/mp4");
+        } catch (IOException e) {
+            return d;
+        }
     }
 
     private static final java.util.Set<String> ZIP_MIMES = java.util.Set.of("application/zip", "application/x-tika-ooxml",

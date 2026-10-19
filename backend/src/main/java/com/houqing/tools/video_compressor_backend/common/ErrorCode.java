@@ -27,6 +27,8 @@ public enum ErrorCode {
     DOCUMENT_CONVERSION_TIMEOUT(HttpStatus.UNPROCESSABLE_ENTITY, "文档转换超时"),
     CONVERTER_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "文档转换引擎不可用"),
     INVALID_TASK_STATE(HttpStatus.CONFLICT, "当前任务状态不允许该操作"),
+    VERSION_CONFLICT(HttpStatus.CONFLICT, "内容已被修改，请刷新后再保存"),
+    DELIVERY_RUNNING(HttpStatus.CONFLICT, "该项目已有交付包正在生成"),
     TOO_MANY_TASKS(HttpStatus.TOO_MANY_REQUESTS, "进行中的任务过多，请稍后再试"),
     RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "请求过于频繁，请稍后再试"),
     QUEUE_FULL(HttpStatus.SERVICE_UNAVAILABLE, "处理队列已满，请稍后再试"),

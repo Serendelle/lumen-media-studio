@@ -14,6 +14,7 @@ export type TaskType =
   | 'metadata.scrub'
   | 'metadata.modify'
   | 'document.convert'
+  | 'spec.deliver'
 
 export interface UserView {
   id: number
@@ -75,7 +76,7 @@ export interface TaskView {
   message?: string
   errorCode?: string
   downloadFilename?: string
-  origin: 'PRO' | 'AI'
+  origin: 'PRO' | 'AI' | 'SPEC'
   attempt: number
   output?: TaskOutput
   result?: Record<string, any>
@@ -231,3 +232,130 @@ export interface PdfPagePreview {
   imageTicketUrl: string
   expiresAt: number
 }
+
+// ---------------- 材料规范官 (/api/v2/specs) ----------------
+
+export type SlotKind = 'VIDEO' | 'AUDIO' | 'IMAGE' | 'DOCUMENT'
+
+export interface SpecRules {
+  extensions?: string[]
+  maxBytes?: number
+  maxWidth?: number
+  maxHeight?: number
+  minWidth?: number
+  minHeight?: number
+  minDurationSec?: number
+  maxDurationSec?: number
+}
+
+export interface SpecSlot {
+  key: string
+  label: string
+  kind: SlotKind
+  required: boolean
+  rules: SpecRules
+  evidence?: string
+  evidenceVerified?: boolean
+}
+
+export interface MaterialSpec {
+  title: string
+  sizeUnit: 'DECIMAL' | 'BINARY'
+  slots: SpecSlot[]
+  naming: { pattern?: string; evidence?: string; evidenceVerified?: boolean }
+  notes: string[]
+}
+
+export interface Roster {
+  sheet: string
+  headerRow: number
+  fields: string[]
+  nameField: string
+  idField?: string
+  people: { key: string; row: number; values: Record<string, string> }[]
+  warnings: string[]
+  fileId: string
+  filename: string
+}
+
+export interface SpecProject {
+  id: string
+  name: string
+  version: number
+  noticeText?: string
+  spec: MaterialSpec
+  roster?: Roster
+  ai: { configured: boolean; model: string; promptVersion: string }
+  templates: {
+    docx?: { fileId: string; filename?: string; placeholders?: string[]; unresolved?: string[]; error?: string }
+    xlsx?: { fileId: string; filename?: string; headerRow?: number; detectedHeaderRow?: number; columns?: string[]; error?: string }
+    knownFields: string[]
+  }
+  updatedAt: number
+  warnings?: string[]
+  /** naming tokens the roster cannot fill (present once a roster is imported) */
+  namingUnknown?: string[]
+}
+
+export interface SpecProjectSummary {
+  id: string
+  name: string
+  slots: number
+  people: number
+  files: number
+  updatedAt: number
+}
+
+export type ItemStatus = 'UNMATCHED' | 'OK' | 'FIXABLE' | 'INVALID' | 'FIXING' | 'FIXED' | 'FIX_FAILED'
+
+export interface SpecViolation {
+  rule: string
+  label: string
+  expected: string
+  actual: string
+  fixable: boolean
+  why?: string
+}
+
+export interface SpecCheck {
+  status: 'OK' | 'FIXABLE' | 'INVALID'
+  violations: SpecViolation[]
+  facts: Record<string, any>
+  fix?: { type: string; params: Record<string, any>; reason: string }
+  afterFix?: SpecCheck
+  fixError?: string
+}
+
+export interface SpecItem {
+  id: string
+  fileId: string
+  relativePath: string
+  filename?: string
+  mediaType?: MediaKind
+  sizeBytes?: number
+  personKey?: string
+  slotKey?: string
+  matchMethod: 'AUTO' | 'MANUAL' | 'NONE'
+  matchNote?: string
+  status: ItemStatus
+  check?: SpecCheck
+  fixedFileId?: string
+  fixTaskId?: string
+}
+
+export interface SpecBoard {
+  people: { key: string; name: string; row: number; complete: boolean; cells: Record<string, { count: number; itemId?: string; status: ItemStatus | 'MISSING' }> }[]
+  summary: { people: number; complete: number; files: number; byStatus: Record<string, number> }
+  items: SpecItem[]
+  started?: number
+}
+
+export interface SpecDraft {
+  spec: MaterialSpec
+  errors: string[]
+  warnings: string[]
+  model: string
+  promptVersion: string
+  rounds: number
+}
+

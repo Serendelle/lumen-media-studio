@@ -11,6 +11,7 @@ export const TASK_LABEL: Record<TaskType, string> = {
   'metadata.scrub': '隐私清理',
   'metadata.modify': '元数据编辑',
   'document.convert': '文档转换',
+  'spec.deliver': '生成交付包',
 }
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -26,6 +27,10 @@ const STAGE_LABEL: Record<string, string> = {
   analyzing: '第一遍分析',
   converting: '转换中',
   preparing: '准备中',
+  snapshot: '读取快照',
+  'fill-xlsx': '填写汇总表',
+  'fill-docx': '填写个人表',
+  materials: '整理材料',
   watermarking: '叠加水印',
   extracting: '提取音轨',
   'loading-model': '加载模型',

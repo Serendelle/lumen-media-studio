@@ -236,7 +236,35 @@ V2 新业务接口统一放在 `/api/v2` 下，原有 V1 路径保持不变。
 
 转换结果 `result`：`{sourceFormat, targetFormat, engine, pages, pageSize, outputSize, warnings[], removed?{…}, sheets?[], verification}`。`verification` 检查 PDF 文件头、非空、页数 ≥ 1、首页和末页可渲染（空白页只记为提示，不判失败）。缺少的字体会写入 `warnings`，不会假装版式没有变化。
 
-## 13. 智能模式 `/api/ai`（新增）
+## 13. 材料规范官 `/api/v2/specs`（V2）
+
+替代原 V2 文档中的"协作交付（公开表单）"。所有接口都会校验项目归属，访问别人的项目一律返回 404。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/` | `{name}` → 201 项目 |
+| GET | `/` | `{items[{id, name, slots, people, files, updatedAt}], total}` |
+| GET / DELETE | `/{id}` | 项目详情（`spec`、`roster`、`templates`、`ai`、`namingUnknown?`）；删除项目时文件保留在"我的文件"中，保留期恢复为默认 24 小时 |
+| POST | `/{id}/extract` | `{noticeText}` → AI 草稿 `{spec, errors[], warnings[], model, promptVersion, rounds}`，**不保存**。只把通知原文发给模型；出现校验错误时自动修正 1 次 |
+| PUT | `/{id}/spec` | `{spec, version, noticeText?}`：校验后保存，`version` 不一致返回 409 `VERSION_CONFLICT`；保存后已放入的材料按新规范重新检查 |
+| POST | `/{id}/roster` | `{fileId, headerRow?, nameField?}`：导入 .xlsx 名单（自动识别表头、姓名列和学号/编号列） |
+| PUT | `/{id}/templates` | `{docxFileId?, xlsxFileId?, xlsxHeaderRow?}` |
+| POST | `/{id}/items` | `{files[{fileId, relativePath}]}`（≤ 500 个）：放入材料、自动匹配并检查，返回看板 |
+| GET | `/{id}/items` | 看板 `{people[{key, name, complete, cells{slotKey: {status, itemId?, count}}}], summary, items[]}`；读取时会同步已结束的修正任务结果 |
+| PATCH / DELETE | `/{id}/items/{itemId}` | 手动指定 `{personKey, slotKey}`；移出文件 |
+| POST | `/{id}/fix` | `{itemIds?}`：为可修正的文件提交修正任务（复用 `video.compress` / `audio.extract` / `image.process` / `document.convert`），返回看板与 `started` |
+| POST | `/{id}/deliveries` | `{onlyComplete, includeOriginals}` + `Idempotency-Key` → 202 任务（`spec.deliver`）；同一项目已有交付在运行时返回 409 `DELIVERY_RUNNING` |
+| GET | `/{id}/deliveries` | 该项目最近的交付任务（TaskView） |
+
+**规范**（`spec`）：`{title, sizeUnit: DECIMAL|BINARY, slots[{key, label, kind: VIDEO|AUDIO|IMAGE|DOCUMENT, required, rules, evidence?, evidenceVerified?}], naming{pattern, evidence?}, notes[]}`。各类型可用的规则：视频为 `extensions/maxBytes/maxWidth/maxHeight/min|maxDurationSec`，音频为 `extensions/maxBytes/min|maxDurationSec`，图片为 `extensions/maxBytes/minWidth/minHeight`，文档为 `extensions/maxBytes`；其它键会被拒绝。`maxBytes` 一律是整数字节。规则有 `evidence` 时，服务端会逐字（忽略空白）核对这句话是否出现在通知原文中，找不到就把 `evidenceVerified` 设为 `false` 并给出警告。命名规则可以用名单的列名，以及 `{序号}`、`{材料}`、`{原文件名}`；"材料名称"等说法会自动归一为 `{材料}`。
+
+**匹配**（确定性规则，不调用模型）：优先按学号/编号（≥ 4 位）匹配；其次按姓名，多个姓名同时命中时取最长的那个，且必须唯一；名单中有重名，或匹配不唯一时，留给用户手动指定。材料项按文件类型匹配，同类型有多个材料项时再按名称区分。
+
+**材料状态**：`UNMATCHED`（未匹配）、`OK`（合格）、`FIXABLE`（可自动修正）、`INVALID`（不合格且无法修正）、`FIXING`（修正中）、`FIXED`（已修正，修正后的文件按同一套规则重新检查通过）、`FIX_FAILED`（修正失败）。
+
+**交付包**：`00_交付说明.txt`、`01_汇总表/汇总.xlsx`（填写 XLSX 模板或自动生成）、`02_个人表/<序号>_<姓名>.docx`（DOCX 模板中的 `{{字段}}` / `${字段}` 占位符，即使被 Word 拆进多个 run 也能替换）、`03_材料/<序号>_<姓名>/<命名规则>.<扩展名>`（可选附带 `原始素材/`）、`90_校验报告/manifest.csv · exceptions.csv · verification.json`、`sha256sums.txt`。生成时读取不可变快照。XLSX 写入区域已有内容或公式时拒绝覆盖，并报出具体单元格坐标；所有值按文本写入，CSV 中以 `= + - @` 开头的单元格会加前缀 `'`。打包前会回读核验：汇总表行数、个人表中有数据的占位符是否全部替换、校验和。存在缺交或不合格项时 `result.overall` 为 `PARTIAL_SUCCESS`。
+
+## 14. 智能模式 `/api/ai`（新增）
 
 DeepSeek 只在后端调用，浏览器不会接触到 Key。未配置 Key 时，`POST /messages` 返回 `503 AI_UNAVAILABLE`。
 

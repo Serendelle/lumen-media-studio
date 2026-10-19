@@ -81,3 +81,40 @@ CREATE TABLE IF NOT EXISTS ai_events (
     created_at      INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_ai_evt_conv ON ai_events(conversation_id, seq);
+
+-- ---------- V2 材料规范官 (spec desk) ----------
+CREATE TABLE IF NOT EXISTS spec_projects (
+    id                     TEXT    PRIMARY KEY,
+    owner_id               INTEGER NOT NULL REFERENCES users(id),
+    name                   TEXT    NOT NULL,
+    notice_text            TEXT,
+    spec_json              TEXT    NOT NULL,
+    roster_json            TEXT,
+    docx_template_file_id  TEXT,
+    xlsx_template_file_id  TEXT,
+    xlsx_header_row        INTEGER,
+    version                INTEGER NOT NULL DEFAULT 1,
+    created_at             INTEGER NOT NULL,
+    updated_at             INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_spec_owner ON spec_projects(owner_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS spec_items (
+    id             TEXT    PRIMARY KEY,
+    project_id     TEXT    NOT NULL REFERENCES spec_projects(id),
+    owner_id       INTEGER NOT NULL REFERENCES users(id),
+    file_id        TEXT    NOT NULL,
+    relative_path  TEXT    NOT NULL,
+    person_key     TEXT,
+    slot_key       TEXT,
+    match_method   TEXT    NOT NULL,
+    match_note     TEXT,
+    status         TEXT    NOT NULL,
+    check_json     TEXT,
+    fixed_file_id  TEXT,
+    fix_task_id    TEXT,
+    created_at     INTEGER NOT NULL,
+    updated_at     INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_spec_items_project ON spec_items(project_id, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_spec_items_file ON spec_items(project_id, file_id);
