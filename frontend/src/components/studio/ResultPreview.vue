@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { TaskView } from '@/api/types'
+import type { TaskView, Verification } from '@/api/types'
+import VideoCompare from '@/components/media/VideoCompare.vue'
+import VerificationCard from '@/components/media/VerificationCard.vue'
 import { previewUrl, downloadFile } from '@/utils/download'
 import { bytes } from '@/utils/format'
 import { TASK_LABEL } from '@/utils/labels'
@@ -10,11 +12,20 @@ const emit = defineEmits<{ close: [] }>()
 
 const dialog = ref<HTMLDialogElement | null>(null)
 const outUrl = ref<string | null>(null)
-const items = ref<{ name: string; inputSize: number; outputSize: number; targetMet?: boolean; quality?: number; suggestion?: string; inUrl?: string; outUrl?: string; outputFileId?: string }[]>([])
+const items = ref<{ name: string; inputSize: number; outputSize?: number; ok?: boolean; error?: string; errorCode?: string; targetMet?: boolean; quality?: number; suggestion?: string; inUrl?: string; outUrl?: string; outputFileId?: string }[]>([])
 const active = ref(0)
 const error = ref<string | null>(null)
 
 const kind = computed(() => props.task?.output?.mediaType)
+const verification = computed(() => props.task?.result?.verification as Verification | undefined)
+/** Video results get the synced side-by-side compare against the exact input the task used. */
+const compareSource = computed(() => {
+  const t = props.task
+  const src = t?.inputs?.[0]
+  if (!t?.output || kind.value !== 'VIDEO' || !src?.filename || src.mediaType !== 'VIDEO') return null
+  return src.fileId
+})
+const partial = computed(() => props.task?.result?.overall === 'PARTIAL_SUCCESS')
 
 watch(
   () => props.task,
@@ -38,7 +49,7 @@ watch(
             outUrl: i.outputFileId ? await previewUrl(i.outputFileId).catch(() => undefined) : undefined,
           })),
         )
-      } else if (t.output && t.output.mediaType !== 'ARCHIVE') {
+      } else if (t.output && t.output.mediaType !== 'ARCHIVE' && !compareSource.value) {
         outUrl.value = await previewUrl(t.output.fileId)
       }
     } catch (e) {
@@ -59,6 +70,10 @@ const current = computed(() => items.value[active.value])
       </header>
 
       <p v-if="error" class="err">{{ error }}</p>
+      <p v-if="partial" class="partial" role="status">
+        部分成功：{{ task.result?.succeeded }} 个成功，{{ task.result?.failed }} 个失败。下载的文件只包含成功的结果，失败原因见下方列表。
+      </p>
+      <VerificationCard v-if="verification" :verification="verification" />
 
       <template v-if="items.length && current">
         <div class="compare">
@@ -75,6 +90,7 @@ const current = computed(() => items.value[active.value])
               <span v-if="current.targetMet === false" class="chip chip--apricot">未达到目标</span>
             </figcaption>
             <img v-if="current.outUrl" :src="current.outUrl" :alt="`处理后 ${current.name}`" loading="lazy" />
+            <div v-else-if="current.ok === false" class="ph fail">处理失败：{{ current.error }}</div>
             <div v-else class="ph">无法预览</div>
           </figure>
         </div>
@@ -83,7 +99,8 @@ const current = computed(() => items.value[active.value])
           <li v-for="(i, idx) in items" :key="idx">
             <button type="button" :class="{ on: idx === active }" @click="active = idx">
               <span class="nm">{{ i.name }}</span>
-              <span class="mono sz">{{ bytes(i.inputSize) }} → {{ bytes(i.outputSize) }}</span>
+              <span v-if="i.ok === false" class="sz failtx">失败 · {{ i.errorCode }}</span>
+              <span v-else class="mono sz">{{ bytes(i.inputSize) }} → {{ bytes(i.outputSize) }}</span>
             </button>
           </li>
         </ol>
@@ -92,6 +109,14 @@ const current = computed(() => items.value[active.value])
           <button v-if="task.output" type="button" class="btn btn--sm" @click="downloadFile(task.output!.fileId, task.output!.filename)">
             {{ task.output.mediaType === 'ARCHIVE' ? '下载全部（zip）' : '下载' }}
           </button>
+        </div>
+      </template>
+
+      <template v-else-if="compareSource && task.output">
+        <VideoCompare :source-file-id="compareSource" :output-file-id="task.output.fileId" :output-name="task.output.filename" />
+        <div class="acts">
+          <span class="mono meta">{{ task.output.filename }} · {{ bytes(task.output.sizeBytes) }}</span>
+          <button type="button" class="btn btn--sm" @click="downloadFile(task.output!.fileId, task.output!.filename)">下载</button>
         </div>
       </template>
 
@@ -176,6 +201,17 @@ figure img,
   place-items: center;
   color: var(--text-3);
   font-size: var(--fs-sm);
+}
+.partial {
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--apricot);
+  color: var(--apricot-ink);
+  font-size: var(--fs-sm);
+}
+.ph.fail,
+.failtx {
+  color: var(--danger);
 }
 .sugg {
   font-size: var(--fs-sm);

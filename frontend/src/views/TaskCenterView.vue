@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import TaskProgress from '@/components/common/TaskProgress.vue'
 import ResultPreview from '@/components/studio/ResultPreview.vue'
+import VerificationCard from '@/components/media/VerificationCard.vue'
 import { tasksApi } from '@/api/endpoints'
 import type { TaskStatus, TaskView } from '@/api/types'
 import { isTerminal, useTasksStore } from '@/stores/tasks'
@@ -118,6 +119,8 @@ async function copyTrace(id: string) {
             </span>
             <span v-if="t.origin === 'AI'" class="chip chip--mint">智能模式</span>
             <span v-if="t.attempt > 1" class="chip">第 {{ t.attempt }} 次</span>
+            <span v-if="t.result?.overall === 'PARTIAL_SUCCESS'" class="chip chip--apricot">部分成功 {{ t.result.succeeded }}/{{ t.result.count }}</span>
+            <span v-if="t.status === 'SUCCEEDED' && t.result?.verification?.status === 'VERIFIED'" class="chip chip--mint">已核验</span>
           </header>
           <dl class="meta">
             <div><dt>输入</dt><dd :title="inputNames(t)">{{ inputNames(t) }}</dd></div>
@@ -131,6 +134,7 @@ async function copyTrace(id: string) {
             <p><strong>原因：</strong>{{ t.message }} <span v-if="t.errorCode" class="mono code">{{ t.errorCode }}</span></p>
             <p v-if="t.errorCode && ERROR_HINT[t.errorCode]"><strong>下一步：</strong>{{ ERROR_HINT[t.errorCode] }}</p>
           </div>
+          <VerificationCard v-if="t.status === 'FAILED' && t.result?.verification" :verification="t.result.verification" compact />
         </div>
         <footer class="acts">
           <button v-if="t.status === 'SUCCEEDED' && (t.output || t.result?.items?.length)" type="button" class="btn btn--sm btn--ghost" @click="previewing = t">查看结果</button>

@@ -145,3 +145,46 @@ export interface Ticket {
   downloadUrl: string
   expiresAt: number
 }
+
+/** Independent evidence attached to an output (task.result.verification). Status is VERIFIED or an error code. */
+export interface Verification {
+  status: 'VERIFIED' | 'TARGET_NOT_MET' | 'OUTPUT_INVALID' | string
+  checks: { name: string; ok: boolean; expected: string; actual: string }[]
+  measured: MeasuredMedia
+}
+
+export interface MeasuredMedia {
+  actualBytes?: number
+  targetBytes?: number
+  formatName?: string
+  duration?: number
+  videoStreams?: number
+  audioStreams?: number
+  bitrate?: number
+  videoCodec?: string
+  width?: number
+  height?: number
+  fps?: number
+  videoBitrate?: number
+  audioCodec?: string
+  audioSampleRate?: number
+  audioChannels?: number
+  audioBitrate?: number
+}
+
+export interface CompareSide {
+  fileId: string
+  filename: string
+  mediaType: MediaKind
+  sizeBytes: number
+  readable: boolean
+  measured: MeasuredMedia
+}
+
+export interface MediaCompare {
+  source: CompareSide
+  output: CompareSide
+  deltaBytes: number
+  savedPercent?: number
+  durationDeltaMs?: number
+}

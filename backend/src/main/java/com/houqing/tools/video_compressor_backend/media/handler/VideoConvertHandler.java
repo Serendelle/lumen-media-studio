@@ -24,7 +24,8 @@ public class VideoConvertHandler implements MediaTaskHandler {
             "mp4", new String[]{"mp4", "libx264", "aac", "video/mp4"},
             "mov", new String[]{"mov", "libx264", "aac", "video/quicktime"},
             "webm", new String[]{"webm", "libvpx-vp9", "libopus", "video/webm"},
-            "mkv", new String[]{"matroska", "libx264", "aac", "video/x-matroska"},
+            // the extension must be one FFmpeg recognises (".matroska" is not, which made every MKV conversion fail)
+            "mkv", new String[]{"mkv", "libx264", "aac", "video/x-matroska"},
             "gif", new String[]{"gif", "gif", "none", "image/gif"});
 
     private final AppProperties props;
@@ -32,10 +33,12 @@ public class VideoConvertHandler implements MediaTaskHandler {
     private final ProcessRunner runner;
     private final StorageService storage;
     private final ObjectMapper mapper;
+    private final MediaVerifier verifier;
 
     public VideoConvertHandler(AppProperties props, ToolLocator tools, ProcessRunner runner,
-                               StorageService storage, ObjectMapper mapper) {
+                               StorageService storage, ObjectMapper mapper, MediaVerifier verifier) {
         this.props = props; this.tools = tools; this.runner = runner; this.storage = storage; this.mapper = mapper;
+        this.verifier = verifier;
     }
 
     @Override public String type() { return "video.convert"; }
@@ -84,6 +87,11 @@ public class VideoConvertHandler implements MediaTaskHandler {
         var summary = mapper.createObjectNode();
         summary.put("targetFormat", target);
         summary.put("outputSize", Files.size(out));
+        summary.put("originalSize", info.size());
+        ctx.progress(99, "verifying");
+        MediaVerifier.Verification v = verifier.verifyConvert(out, target, info, ctx.token());
+        summary.set("verification", v.toJson());
+        v.throwIfFailed();
         MediaKind kind = target.equals("gif") ? MediaKind.IMAGE : MediaKind.VIDEO;
         String name = StorageService.baseName(input.getOriginalName()) + "." + spec[0];
         MediaFile mf = storage.registerOutput(ctx.ownerId(), out, name, kind, spec[3], ctx.taskId());

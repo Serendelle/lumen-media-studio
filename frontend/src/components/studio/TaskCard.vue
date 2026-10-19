@@ -27,7 +27,16 @@ const facts = computed(() => {
   } else if (after) {
     out.push({ k: '输出', v: bytes(after) })
   }
-  if (res.targetSizeMB) out.push({ k: '目标', v: `${res.targetSizeMB} MB` })
+  if (res.targetSizeMB) out.push({ k: '目标', v: `${res.targetSizeMB} MiB` })
+  if (res.overall === 'PARTIAL_SUCCESS') out.push({ k: '结果', v: `部分成功（${res.succeeded}/${res.count}）`, tone: 'warn' })
+  if (res.verification) {
+    const v = res.verification
+    const bad = (v.checks ?? []).filter((c: any) => !c.ok).length
+    out.push(v.status === 'VERIFIED'
+      ? { k: '核验', v: `${v.checks.length} 项全部通过`, tone: 'ok' }
+      : { k: '核验', v: `${bad} 项未通过`, tone: 'warn' })
+  }
+  if (res.retry) out.push({ k: '自动调整', v: `码率 ${res.retry.fromKbps} → ${res.retry.toKbps} kbps` })
   if (res.codec) out.push({ k: '编码', v: String(res.codec).toUpperCase() })
   if (res.count) out.push({ k: '数量', v: `${res.count} 个文件` })
   if (res.pages) out.push({ k: '页数', v: `${res.pages} 页` })

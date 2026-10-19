@@ -97,13 +97,37 @@ public class ImageProcessHandler implements MediaTaskHandler {
         long totalIn = 0, totalOut = 0;
         boolean allTargetsMet = true;
 
+        List<ObjectNode> okItems = new ArrayList<>();
+        ApiException firstError = null;
+        int failed = 0;
         for (int i = 0; i < inputs.size(); i++) {
             if (ctx.token().isCancelled()) throw new ApiException(ErrorCode.CANCELLED);
             MediaFile in = inputs.get(i);
             String outExt = outputExt(tool, p, in);
             Path dst = ctx.workDir().resolve("out_" + i + "." + outExt);
-            ObjectNode item = processOne(ctx, in, dst, tool, p, outExt);
             String name = StorageService.baseName(in.getOriginalName()) + "." + outExt;
+            ObjectNode item;
+            try {
+                item = processOne(ctx, in, dst, tool, p, outExt);
+                if (!Files.isRegularFile(dst) || Files.size(dst) == 0) throw new ApiException(ErrorCode.PROCESS_FAILED, "未生成输出图片");
+            } catch (ApiException e) {
+                if (e.getCode() == ErrorCode.CANCELLED) throw e;
+                // one bad image must not sink the batch: record why, keep going, deliver only what succeeded
+                if (firstError == null) firstError = e;
+                failed++;
+                ObjectNode bad = items.addObject();
+                bad.put("inputFileId", in.getId());
+                bad.put("name", in.getOriginalName());
+                bad.put("inputSize", in.getSizeBytes());
+                bad.put("ok", false);
+                bad.put("errorCode", e.getCode().name());
+                // the generic tool failure says nothing useful per image; name the likely cause instead
+                bad.put("error", e.getCode() == ErrorCode.PROCESS_FAILED
+                        ? "无法解码这张图片，文件可能已损坏或格式不受支持" : e.getMessage());
+                totalIn += in.getSizeBytes();
+                ctx.progress((int) ((i + 1.0) / inputs.size() * 95), "processing " + (i + 1) + "/" + inputs.size());
+                continue;
+            }
             outputs.add(dst);
             names.add(name);
             long outSize = Files.size(dst);
@@ -111,11 +135,17 @@ public class ImageProcessHandler implements MediaTaskHandler {
             item.put("name", name);
             item.put("inputSize", in.getSizeBytes());
             item.put("outputSize", outSize);
+            item.put("ok", true);
             if (item.has("targetMet") && !item.path("targetMet").asBoolean()) allTargetsMet = false;
             items.add(item);
+            okItems.add(item);
             totalIn += in.getSizeBytes();
             totalOut += outSize;
             ctx.progress((int) ((i + 1.0) / inputs.size() * 95), "processing " + (i + 1) + "/" + inputs.size());
+        }
+        if (outputs.isEmpty()) {
+            throw new ApiException(firstError.getCode(), "全部 " + inputs.size() + " 张图片处理失败：" + items.get(0).path("error").asText(),
+                    java.util.Map.of("items", mapper.convertValue(items, Object.class)));
         }
 
         // zip first (from the work-dir copies), then register each file individually for preview/download
@@ -135,22 +165,26 @@ public class ImageProcessHandler implements MediaTaskHandler {
             String ext = StorageService.extensionOf(names.get(i));
             MediaFile mf = storage.registerOutput(ctx.ownerId(), outputs.get(i), names.get(i), MediaKind.IMAGE,
                     MIME.getOrDefault(ext, "image/png"), ctx.taskId());
-            ((ObjectNode) items.get(i)).put("outputFileId", mf.getId());
+            okItems.get(i).put("outputFileId", mf.getId());
         }
 
         ObjectNode summary = mapper.createObjectNode();
         summary.put("tool", tool);
         summary.put("count", inputs.size());
+        summary.put("succeeded", outputs.size());
+        summary.put("failed", failed);
+        // presentation-level aggregate; the task status itself stays SUCCEEDED because usable output exists
+        summary.put("overall", failed > 0 ? "PARTIAL_SUCCESS" : "SUCCEEDED");
         summary.put("inputSize", totalIn);
         summary.put("outputSize", totalOut);
         if (p.path("targetSizeKB").asInt(0) > 0) summary.put("allTargetsMet", allTargetsMet);
         summary.set("items", items);
 
         if (zip == null) {
-            MediaFile single = storage.require(ctx.ownerId(), items.get(0).path("outputFileId").asText());
+            MediaFile single = storage.require(ctx.ownerId(), okItems.get(0).path("outputFileId").asText());
             return new HandlerResult(single, summary);
         }
-        MediaFile mf = storage.registerOutput(ctx.ownerId(), zip, "images_processed.zip",
+        MediaFile mf = storage.registerOutput(ctx.ownerId(), zip, failed > 0 ? "images_processed_partial.zip" : "images_processed.zip",
                 MediaKind.ARCHIVE, "application/zip", ctx.taskId());
         return new HandlerResult(mf, summary);
     }

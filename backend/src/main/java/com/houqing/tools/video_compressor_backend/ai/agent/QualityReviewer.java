@@ -28,10 +28,12 @@ public class QualityReviewer {
     private final MediaExecutor executor;
     private final TaskEngine engine;
     private final ObjectMapper mapper;
+    private final MediaVerifier verifier;
 
     public QualityReviewer(StorageService storage, MediaProbe probe, ExifToolRunner exif, MediaExecutor executor,
-                           TaskEngine engine, ObjectMapper mapper) {
+                           TaskEngine engine, ObjectMapper mapper, MediaVerifier verifier) {
         this.engine = engine;
+        this.verifier = verifier;
         this.storage = storage;
         this.probe = probe;
         this.exif = exif;
@@ -149,32 +151,20 @@ public class QualityReviewer {
             }
         }
         switch (r.tool()) {
+            // the three AV operations are re-verified from scratch with the same rule sets the handlers use, so the
+            // review is evidence read back from the file, not an echo of the handler's own summary
             case "video.compress" -> {
-                if ("size".equals(p.path("mode").asText())) {
-                    double targetMb = p.path("targetSizeMB").asDouble();
-                    double actualMb = actualSize / 1048576.0;
-                    oks.add(add(checks, r.stepId(), "体积", actualMb <= targetMb, "≤ " + targetMb + " MB", round2(actualMb) + " MB"));
-                }
-                if (mi != null) {
-                    String wantCodec = "h265".equals(p.path("codec").asText("h264")) ? "hevc" : "h264";
-                    oks.add(add(checks, r.stepId(), "视频编码", wantCodec.equals(mi.videoCodec()), wantCodec, String.valueOf(mi.videoCodec())));
-                    String res = p.path("resolution").asText("original");
-                    if (res.endsWith("p")) {
-                        int h = Integer.parseInt(res.replace("p", ""));
-                        oks.add(add(checks, r.stepId(), "分辨率", mi.height() <= h, "高度 ≤ " + h, mi.width() + "×" + mi.height()));
-                    }
-                }
+                MediaProbe.MediaInfo source = sourceInfo(ownerId, r);
+                if (source != null) addAll(checks, r.stepId(), verifier.verifyCompress(storage.pathOf(f), p, source, null), oks);
+                else oks.add(add(checks, r.stepId(), "源文件", false, "可读取", "源文件已不可用，无法对照"));
             }
-            case "audio.extract" -> {
-                if (mi != null) {
-                    String fmt = p.path("format").asText("mp3");
-                    String want = switch (fmt) { case "mp3" -> "mp3"; case "wav" -> "pcm_s16le"; case "flac" -> "flac"; default -> "aac"; };
-                    oks.add(add(checks, r.stepId(), "音频格式", want.equals(mi.audioCodec()) && !mi.hasVideo(), fmt.toUpperCase(),
-                            mi.audioCodec() + (mi.hasVideo() ? " + 视频" : "")));
-                }
-            }
+            case "audio.extract" -> addAll(checks, r.stepId(),
+                    verifier.verifyAudio(storage.pathOf(f), p.path("format").asText("mp3"), p), oks);
             case "video.convert" -> {
-                if (mi != null) oks.add(add(checks, r.stepId(), "目标格式", true, p.path("targetFormat").asText(), mi.formatName()));
+                MediaProbe.MediaInfo source = sourceInfo(ownerId, r);
+                if (source != null) addAll(checks, r.stepId(),
+                        verifier.verifyConvert(storage.pathOf(f), p.path("targetFormat").asText(), source, null), oks);
+                else oks.add(add(checks, r.stepId(), "源文件", false, "可读取", "源文件已不可用，无法对照"));
             }
             case "metadata.scrub" -> {
                 String dirId = "review-" + UUID.randomUUID();
@@ -205,10 +195,30 @@ public class QualityReviewer {
         return oks;
     }
 
+    private void addAll(ArrayNode checks, int stepId, MediaVerifier.Verification v, List<Boolean> oks) {
+        for (JsonNode c : v.checks()) {
+            oks.add(add(checks, stepId, c.path("name").asText(), c.path("ok").asBoolean(),
+                    c.path("expected").asText(), c.path("actual").asText()));
+        }
+    }
+
+    /** Probe of the step's first input, read back from its task record (the handler's view is not trusted). */
+    private MediaProbe.MediaInfo sourceInfo(long ownerId, MediaExecutor.StepResult r) {
+        List<String> ins = inputsOf(ownerId, r);
+        if (ins.isEmpty()) return null;
+        return storage.find(ownerId, ins.get(0)).map(mf -> {
+            try {
+                return probe.probe(storage.pathOf(mf));
+            } catch (ApiException e) {
+                return null;
+            }
+        }).orElse(null);
+    }
+
     private boolean sizeMiss(long ownerId, MediaExecutor.StepResult r) {
         if (!"video.compress".equals(r.tool()) || !"size".equals(r.params().path("mode").asText())) return false;
         return storage.find(ownerId, r.outputFileId())
-                .map(f -> f.getSizeBytes() / 1048576.0 > r.params().path("targetSizeMB").asDouble())
+                .map(f -> f.getSizeBytes() > MediaVerifier.targetBytes(r.params()))
                 .orElse(false);
     }
 

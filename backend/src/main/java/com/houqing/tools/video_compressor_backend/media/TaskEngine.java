@@ -192,7 +192,7 @@ public class TaskEngine {
             complete(taskId, result);
         } catch (ApiException e) {
             if (e.getCode() == ErrorCode.CANCELLED) cancelFinalize(taskId);
-            else fail(taskId, e.getCode(), e.getMessage());
+            else fail(taskId, e.getCode(), e.getMessage(), e.getDetails());
         } catch (Exception e) {
             log.error("task {} crashed", taskId, e);
             fail(taskId, ErrorCode.PROCESS_FAILED, ErrorCode.PROCESS_FAILED.defaultMessage());
@@ -230,12 +230,18 @@ public class TaskEngine {
     }
 
     protected void fail(String taskId, ErrorCode code, String message) {
+        fail(taskId, code, message, null);
+    }
+
+    /** details (e.g. the verification evidence of a rejected output) are kept as the task result for the UI. */
+    protected void fail(String taskId, ErrorCode code, String message, Map<String, Object> details) {
         TaskEntity t = repo.findById(taskId).orElse(null);
         if (t == null) return;
         long now = System.currentTimeMillis();
         t.setStatus("FAILED");
         t.setErrorCode(code.name());
         t.setMessage(message == null ? code.defaultMessage() : message);
+        if (details != null && !details.isEmpty()) t.setResultJson(writeJson(mapper.valueToTree(details)));
         t.setFinishedAt(now);
         t.setUpdatedAt(now);
         repo.save(t);

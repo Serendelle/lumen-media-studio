@@ -32,8 +32,13 @@ function submit() {
 <template>
   <ToolShell icon="audio" kicker="Audio · Extract" title="音频提取" subtitle="从视频（或音频）中取出音轨并转为所需格式。无损格式（WAV / FLAC）不需要设置码率。"
              feature="audio.extract" tools="FFmpeg" :busy="busy" :error="error" :can-submit="!!selected[0] && !noAudio" @submit="submit">
-    <MediaPicker v-model="selected" :kinds="['VIDEO', 'AUDIO']" label="源文件" accept="video/*,audio/*" />
+    <MediaPicker v-model="selected" :kinds="['VIDEO', 'AUDIO']" label="源文件（可选原视频或处理结果）" accept="video/*,audio/*" with-outputs />
     <p v-if="noAudio" class="warn" role="note">该文件没有音轨，无法提取音频。</p>
+    <p class="note" role="note">
+      <template v-if="lossy">{{ form.format.toUpperCase() }} 为有损格式：音轨会被<strong>重新编码</strong>（转码），不是无损提取。</template>
+      <template v-else>{{ form.format.toUpperCase() }} 为无损格式：解码后的音频按原样保存，文件会比较大。</template>
+      完成后会独立核验：音频流 ≥ 1、视频流 = 0，编码与采样率符合要求。
+    </p>
     <Segmented v-model="form.format" name="afmt" label="输出格式"
                :options="[{ value: 'mp3', label: 'MP3' }, { value: 'aac', label: 'AAC' }, { value: 'm4a', label: 'M4A' }, { value: 'wav', label: 'WAV' }, { value: 'flac', label: 'FLAC' }]" />
     <div class="grid">
@@ -68,6 +73,11 @@ function submit() {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--sp-4);
+}
+.note {
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--text-2);
 }
 .warn {
   padding: 10px 12px;

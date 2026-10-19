@@ -56,4 +56,7 @@ export const ERROR_HINT: Record<string, string> = {
   NOT_FOUND: '输入文件已过期或被删除，请重新上传后提交新任务。',
   AI_UNAVAILABLE: 'AI 服务未配置或暂不可用，可改用专业模式完成同样的处理。',
   CANCELLED: '任务已被取消，可以重试。',
+  TARGET_NOT_MET: '已自动降码率重试一次仍超出目标：调大目标体积、降低分辨率或去掉音频后重新提交。原文件未受影响。',
+  AUDIO_STREAM_MISSING: '这个文件没有音轨，换一个含声音的视频或音频文件。',
+  OUTPUT_INVALID: '输出没有通过独立核验（见下方检查项），可以重试；反复出现请换一种输出格式。',
 }

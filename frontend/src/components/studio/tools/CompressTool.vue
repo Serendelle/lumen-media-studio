@@ -42,7 +42,7 @@ const resOptions = computed(() => {
   return resolutions.filter((r) => r.value === 'original' || !h || parseInt(r.value) < h)
 })
 
-// sensible default for a newly picked video: ~40% of its size, rounded to 0.5 MB
+// sensible default for a newly picked video: ~40% of its size, rounded to 0.5 MiB
 watch(
   () => file.value?.fileId,
   () => {
@@ -104,10 +104,12 @@ const sizeHint = computed(() => {
   const s = file.value?.size
   if (!s) return ''
   const ratio = (form.targetSizeMB * 1024 * 1024) / s
-  return ratio >= 1 ? '目标不小于原文件，压缩意义不大' : `约为原文件的 ${Math.round(ratio * 100)}%`
+  const rel = ratio >= 1 ? '目标不小于原文件，压缩意义不大' : `约为原文件的 ${Math.round(ratio * 100)}%`
+  return `${rel} · 1 MiB = 1,048,576 字节，完成后按实际字节数核验`
 })
 
-const canSubmit = computed(() => !!selected.value[0] && (form.mode !== 'size' || plan.value?.feasible !== false))
+// size mode: only a completed estimate that says "feasible" unlocks submission (pending or failed estimates do not)
+const canSubmit = computed(() => !!selected.value[0] && (form.mode !== 'size' || (plan.value?.feasible === true && !estimating.value)))
 
 function submit() {
   void run(() => mediaApi.compressVideo(body()), '压缩任务已提交')
@@ -150,7 +152,7 @@ function submit() {
 
     <div class="grid">
       <div v-if="form.mode === 'size'" class="field">
-        <label for="tsize">目标体积（MB）</label>
+        <label for="tsize">目标体积（MiB）</label>
         <input id="tsize" v-model.number="form.targetSizeMB" class="input mono" type="number" min="0.1" step="0.5"
                :aria-invalid="!!fields.targetSizeMB" />
         <span class="hint">{{ sizeHint }}</span>
@@ -208,9 +210,13 @@ function submit() {
       </div>
     </div>
 
-    <div v-if="form.mode === 'size' && selected[0]" class="plan" :class="{ bad: plan && !plan.feasible }" aria-live="polite">
+    <div v-if="form.mode === 'size' && selected[0]" class="plan" :class="{ bad: (plan && !plan.feasible) || !!estimateError }" aria-live="polite">
       <template v-if="estimating">正在评估目标是否可实现…</template>
-      <template v-else-if="estimateError">{{ estimateError }}</template>
+      <template v-else-if="estimateError">
+        <strong>评估失败，暂不能提交</strong>
+        <span>{{ estimateError }}</span>
+        <button type="button" class="btn btn--sm btn--soft" @click="estimate">重新评估</button>
+      </template>
       <template v-else-if="plan?.feasible">
         <strong>可以实现</strong>
         <span>预计视频码率约 <b class="mono">{{ plan.videoKbps }} kbps</b>，输出高度 {{ plan.height }}p。</span>

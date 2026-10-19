@@ -38,14 +38,16 @@ public class VideoCompressHandler implements MediaTaskHandler {
     private final ProcessRunner runner;
     private final StorageService storage;
     private final ObjectMapper mapper;
+    private final MediaVerifier verifier;
 
     public VideoCompressHandler(AppProperties props, ToolLocator tools, ProcessRunner runner,
-                                StorageService storage, ObjectMapper mapper) {
+                                StorageService storage, ObjectMapper mapper, MediaVerifier verifier) {
         this.props = props;
         this.tools = tools;
         this.runner = runner;
         this.storage = storage;
         this.mapper = mapper;
+        this.verifier = verifier;
     }
 
     @Override public String type() { return "video.compress"; }
@@ -154,8 +156,26 @@ public class VideoCompressHandler implements MediaTaskHandler {
                     summary.put("cappedToSourceBitrate", true);
                 }
                 summary.put("targetSizeMB", p.path("targetSizeMB").asDouble());
+                summary.put("targetBytes", MediaVerifier.targetBytes(p));
                 summary.put("targetVideoBitrateKbps", kbps);
                 twoPass(ctx, inputPath, output, enc, kbps);
+                // the encoder's exit code proves nothing about the size: measure the bytes, and on a miss make
+                // exactly one bounded adjustment (bitrate scaled to the overshoot, 5% margin) before giving up
+                long target = MediaVerifier.targetBytes(p);
+                long actual = Files.size(output);
+                if (actual > target) {
+                    long next = (long) Math.floor(kbps * ((double) target / actual) * 0.95);
+                    if (next >= 50) {
+                        ObjectNode retry = summary.putObject("retry");
+                        retry.put("reason", "首次输出 " + MediaVerifier.mib(actual) + " MiB 超出目标，降低码率重编码一次");
+                        retry.put("firstAttemptBytes", actual);
+                        retry.put("fromKbps", kbps);
+                        retry.put("toKbps", next);
+                        summary.put("targetVideoBitrateKbps", next);
+                        Files.deleteIfExists(output);
+                        twoPass(ctx, inputPath, output, enc, next);
+                    }
+                }
             }
             case "bitrate" -> {
                 long kbps = p.path("videoBitrateKbps").asInt();
@@ -172,6 +192,12 @@ public class VideoCompressHandler implements MediaTaskHandler {
         long outSize = Files.size(output);
         summary.put("outputSize", outSize);
         summary.put("savedPercent", info.size() > 0 ? Math.round((1 - (double) outSize / info.size()) * 1000) / 10.0 : 0);
+
+        ctx.progress(99, "verifying");
+        MediaVerifier.Verification v = verifier.verifyCompress(output, p, info, ctx.token());
+        summary.set("verification", v.toJson());
+        if ("size".equals(mode)) summary.put("targetMet", outSize <= MediaVerifier.targetBytes(p));
+        v.throwIfFailed();
 
         String outName = StorageService.baseName(input.getOriginalName()) + "_compressed.mp4";
         MediaFile out = storage.registerOutput(ctx.ownerId(), output, outName, MediaKind.VIDEO, "video/mp4", ctx.taskId());

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import Icon from '@/components/common/Icon.vue'
+import { filesApi } from '@/api/endpoints'
 import type { FileView, MediaKind } from '@/api/types'
 import { useLibraryStore } from '@/stores/library'
 import { useToast } from '@/composables/useToast'
@@ -13,8 +14,10 @@ const props = withDefaults(
     max?: number
     label?: string
     accept?: string
+    /** also offer processing results (e.g. extract audio from the compressed video, not only the upload) */
+    withOutputs?: boolean
   }>(),
-  { multiple: false, max: 50, label: '选择文件' },
+  { multiple: false, max: 50, label: '选择文件', withOutputs: false },
 )
 const model = defineModel<string[]>({ default: () => [] })
 
@@ -23,8 +26,18 @@ const toast = useToast()
 const dragging = ref(false)
 const input = ref<HTMLInputElement | null>(null)
 
-const candidates = computed(() => lib.files.filter((f) => props.kinds.includes(f.mediaType)))
-const selected = computed(() => model.value.map((id) => lib.files.find((f) => f.fileId === id)).filter(Boolean) as FileView[])
+const outputs = ref<FileView[]>([])
+onMounted(async () => {
+  if (!props.withOutputs) return
+  try {
+    outputs.value = (await filesApi.list('OUTPUT', 0, 50)).content
+  } catch {
+    /* results are optional here; uploads still work */
+  }
+})
+const pool = computed(() => [...lib.files, ...outputs.value])
+const candidates = computed(() => pool.value.filter((f) => props.kinds.includes(f.mediaType)))
+const selected = computed(() => model.value.map((id) => pool.value.find((f) => f.fileId === id)).filter(Boolean) as FileView[])
 
 function toggle(f: FileView) {
   if (!props.multiple) {
@@ -129,7 +142,7 @@ function describe(f: FileView) {
           <span class="kind mono">{{ f.mediaType.slice(0, 3) }}</span>
           <span class="txt">
             <span class="name">{{ f.originalFilename }}</span>
-            <span class="desc">{{ describe(f) }}</span>
+            <span class="desc"><span v-if="f.role === 'OUTPUT'" class="tag">处理结果</span>{{ describe(f) }}</span>
           </span>
           <span class="check" aria-hidden="true">{{ model.includes(f.fileId) ? (multiple ? model.indexOf(f.fileId) + 1 : '✓') : '' }}</span>
         </button>
@@ -143,6 +156,14 @@ function describe(f: FileView) {
 </template>
 
 <style scoped>
+.tag {
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--fog);
+  color: var(--fog-ink);
+  font-size: 10px;
+}
 .picker {
   display: grid;
   gap: 10px;

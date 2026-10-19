@@ -3,6 +3,7 @@ import type {
   AuthResult,
   CompressionPlan,
   FileView,
+  MediaCompare,
   MetadataCapability,
   MetadataView,
   Page,
@@ -21,6 +22,11 @@ export const authApi = {
     postJson<AuthResult>('/api/auth/register', { username, password, displayName }),
   login: (username: string, password: string) => postJson<AuthResult>('/api/auth/login', { username, password }),
   me: () => getJson<UserView>('/api/auth/me'),
+}
+
+export const compareApi = {
+  media: (sourceFileId: string, outputFileId: string) =>
+    getJson<MediaCompare>('/api/v2/media/compare', { params: { sourceFileId, outputFileId } }),
 }
 
 export const workspaceApi = {

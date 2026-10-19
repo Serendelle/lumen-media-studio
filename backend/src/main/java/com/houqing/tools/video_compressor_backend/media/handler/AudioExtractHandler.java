@@ -34,10 +34,12 @@ public class AudioExtractHandler implements MediaTaskHandler {
     private final ProcessRunner runner;
     private final StorageService storage;
     private final ObjectMapper mapper;
+    private final MediaVerifier verifier;
 
     public AudioExtractHandler(AppProperties props, ToolLocator tools, ProcessRunner runner,
-                               StorageService storage, ObjectMapper mapper) {
+                               StorageService storage, ObjectMapper mapper, MediaVerifier verifier) {
         this.props = props; this.tools = tools; this.runner = runner; this.storage = storage; this.mapper = mapper;
+        this.verifier = verifier;
     }
 
     @Override public String type() { return "audio.extract"; }
@@ -47,6 +49,8 @@ public class AudioExtractHandler implements MediaTaskHandler {
     public void validate(JsonNode p, List<MediaFile> inputs) {
         if (inputs.size() != 1 || !inputs.get(0).kind().isAv())
             throw new ApiException(ErrorCode.VALIDATION_FAILED, "需要一个含音频的视频或音频文件");
+        // the upload already probed the streams: refuse before queueing instead of producing an empty file
+        if (knownSilent(inputs.get(0))) throw new ApiException(ErrorCode.AUDIO_STREAM_MISSING);
         String fmt = p.path("format").asText("mp3");
         if (!FORMATS.containsKey(fmt)) throw new ApiException(ErrorCode.VALIDATION_FAILED, "不支持的音频格式: " + fmt);
         if (p.hasNonNull("bitrateKbps")) {
@@ -63,7 +67,7 @@ public class AudioExtractHandler implements MediaTaskHandler {
     public HandlerResult execute(TaskContext ctx) {
         MediaFile input = ctx.inputs().get(0);
         MediaProbe.MediaInfo info = ctx.probe(input);
-        if (!info.hasAudio()) throw new ApiException(ErrorCode.CAPABILITY_UNSUPPORTED, "该文件不含音频轨道");
+        if (!info.hasAudio()) throw new ApiException(ErrorCode.AUDIO_STREAM_MISSING);
 
         String fmt = ctx.params().path("format").asText("mp3");
         String[] spec = FORMATS.get(fmt);
@@ -93,8 +97,25 @@ public class AudioExtractHandler implements MediaTaskHandler {
         ObjectNode summary = mapper.createObjectNode();
         summary.put("format", fmt);
         summary.put("outputSize", size);
+        // MP3/AAC/M4A are always re-encoded; only WAV/FLAC are lossless with respect to the decoded source
+        summary.put("operation", fmt.equals("wav") || fmt.equals("flac") ? "extract-lossless" : "transcode");
+        summary.put("sourceAudioCodec", info.audioCodec());
+        ctx.progress(99, "verifying");
+        MediaVerifier.Verification v = verifier.verifyAudio(out, fmt, ctx.params());
+        summary.set("verification", v.toJson());
+        v.throwIfFailed();
         String name = StorageService.baseName(input.getOriginalName()) + "." + fmt;
         MediaFile mf = storage.registerOutput(ctx.ownerId(), out, name, MediaKind.AUDIO, spec[1], ctx.taskId());
         return new HandlerResult(mf, summary);
+    }
+
+    private boolean knownSilent(MediaFile f) {
+        if (f.getProbeJson() == null) return false;
+        try {
+            JsonNode info = mapper.readTree(f.getProbeJson());
+            return info.has("hasAudio") && !info.path("hasAudio").asBoolean();
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

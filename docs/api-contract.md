@@ -28,6 +28,7 @@
 | 413 | `FILE_TOO_LARGE` | 超过体积上限 |
 | 415 | `UNSUPPORTED_MEDIA` | 真实文件类型不被该接口接受 |
 | 422 | `MEDIA_UNREADABLE` / `TARGET_UNREACHABLE` / `CAPABILITY_UNSUPPORTED` | 媒体无法解析；目标无法实现（附建议）；格式不支持该操作 |
+| 422 | `TARGET_NOT_MET` / `AUDIO_STREAM_MISSING` / `OUTPUT_INVALID` | V2：编码完成但实测字节仍超出目标（已自动降码率重试 1 次）；输入没有音轨；输出未通过独立核验。任务失败时 `result.verification` 保留核验明细 |
 | 429 | `TOO_MANY_TASKS` / `RATE_LIMITED` | 进行中的任务超过配额；登录失败过多 |
 | 503 | `QUEUE_FULL` / `TOOL_UNAVAILABLE` / `INSUFFICIENT_DISK` / `AI_UNAVAILABLE` | 队列已满；依赖工具未安装；磁盘空间不足；AI 未配置 |
 | 500 | `INTERNAL_ERROR` | 附带 `traceId`，详细信息只写入服务端日志 |
@@ -96,7 +97,7 @@
 | `uniqueFilename` | string | 必填 |
 | `mode` | `crf` \| `bitrate` \| `size` \| `kbps` | `bitrate` 保持原含义（按 `targetSizeMB` 压缩），`size` 为其别名；`kbps` 表示直接指定 `videoBitrateKbps` |
 | `crfValue` | 0-51 | crf 模式，默认 23 |
-| `targetSizeMB` | >0 | 两遍编码；无法实现时任务以 `TARGET_UNREACHABLE` 失败，并给出建议 |
+| `targetSizeMB` | >0 | **单位为 MiB**（1 MiB = 1,048,576 字节，字段名沿用旧称）。两遍编码；评估不可行时以 `TARGET_UNREACHABLE` 失败并给出建议；编码后按真实字节核对，超出时降码率重试 1 次，仍超出则以 `TARGET_NOT_MET` 失败 |
 | `resolution` | `original\|2160p\|1440p\|1080p\|720p\|540p\|480p\|360p` | 只缩小、不放大 |
 | `width` / `height` | 0-7680 | 原字段；大于等于源分辨率时不做处理 |
 | `codec` | `h264\|h265` | 默认 h264 |
@@ -109,7 +110,35 @@
 
 `POST /extract`：`{uniqueFilename, targetFormat: mp3|aac|m4a|wav|flac, bitrateKbps? 32-320, sampleRate? (8000/16000/22050/32000/44100/48000/96000), channels? 1|2}`；`GET /progress/{taskId}`。
 
+- `uniqueFilename` 可以是上传文件，也可以是处理结果（如压缩后的视频）；服务端只使用这个文件，不会替换成别的版本。
+- 已知没有音轨的输入直接返回 422 `AUDIO_STREAM_MISSING`，不创建任务，也不生成空文件。
+- `result.operation`：`transcode`（MP3/AAC/M4A，重新编码）或 `extract-lossless`（WAV/FLAC）；`result.sourceAudioCodec` 为源音轨编码。
+
+### 输出核验（V2）
+
+`video.compress`、`video.convert`、`audio.extract` 成功时，`result.verification` 为：
+
+```json
+{ "status": "VERIFIED",
+  "checks": [{ "name": "目标体积", "ok": true, "expected": "≤ 0.30 MiB（314572 字节）", "actual": "0.30 MiB（309635 字节）" }],
+  "measured": { "actualBytes": 309635, "targetBytes": 314572, "formatName": "mov,mp4,…", "duration": 6.0,
+                "videoStreams": 1, "audioStreams": 1, "videoCodec": "h264", "width": 640, "height": 360, "fps": 25 } }
+```
+
+数据全部来自对输出文件的重新检测：磁盘上的真实字节数、新一轮 FFprobe，以及首尾各约 2 秒的实际解码（必须真正解出画面，退出码为 0 不算通过）。规则：
+
+| 操作 | 检查项 |
+|---|---|
+| `video.compress` | 目标体积（size 模式）、视频编码、分辨率上限、音轨保留/去除、画面可解码 |
+| `video.convert` | 封装格式（MP4 与 MOV 用 major brand 区分）、视频流与编码、音轨（GIF 要求无音轨；其它格式跟随源文件）、画面可解码 |
+| `audio.extract` | 音频流 ≥ 1、视频流 = 0、音频编码、采样率/声道（若指定）、时长 > 0 |
+
+任一检查不通过，任务以对应错误码失败（`TARGET_NOT_MET` 或 `OUTPUT_INVALID`）；智能模式的质量审核独立使用同一套规则重新检查。
+
 ## 6. 图片 `/api/image`
+
+V2：批量处理时单张失败不会让整批失败。`result` 新增 `succeeded`、`failed`、`overall`（`SUCCEEDED` | `PARTIAL_SUCCESS`，展示层汇总，任务状态仍为 `SUCCEEDED`）；失败项为 `{ok:false, errorCode, error}`，没有 `outputFileId`；下载的 zip 只包含成功的文件（文件名为 `images_processed_partial.zip`）。全部失败时任务为 `FAILED`。
+
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -174,6 +203,7 @@
 
 V2 新业务接口统一放在 `/api/v2` 下，原有 V1 路径保持不变。
 
+- `GET /api/v2/media/compare?sourceFileId&outputFileId`（需登录，两个文件都必须属于当前用户，否则 404）：`{source, output, deltaBytes, savedPercent?, durationDeltaMs?}`，每侧为 `{fileId, filename, mediaType, sizeBytes, readable, measured{…同上}}`，全部为当场检测的数据。
 - `GET /api/v2/workspace/summary`（需登录）：`{tasksByStatus{QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED}, inputs{count,bytes}, outputs{count,bytes}, nextExpiryAt?, recentTasks[TaskView ×5], recentFiles[FileView ×5]}`。全部数字由数据库按当前用户聚合，不含任何其他用户的数据。
 
 ## 12. 智能模式 `/api/ai`（新增）

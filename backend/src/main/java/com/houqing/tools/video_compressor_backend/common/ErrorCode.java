@@ -15,6 +15,11 @@ public enum ErrorCode {
     MEDIA_UNREADABLE(HttpStatus.UNPROCESSABLE_ENTITY, "无法解析该媒体文件"),
     TARGET_UNREACHABLE(HttpStatus.UNPROCESSABLE_ENTITY, "处理目标无法实现"),
     CAPABILITY_UNSUPPORTED(HttpStatus.UNPROCESSABLE_ENTITY, "该格式不支持此操作"),
+    /** The encode finished, but the measured output still exceeds the requested size. */
+    TARGET_NOT_MET(HttpStatus.UNPROCESSABLE_ENTITY, "输出未达到目标体积"),
+    AUDIO_STREAM_MISSING(HttpStatus.UNPROCESSABLE_ENTITY, "该文件不含音频轨道"),
+    /** An independent re-check of the output (probe / decode / stream layout) contradicted the request. */
+    OUTPUT_INVALID(HttpStatus.UNPROCESSABLE_ENTITY, "输出文件未通过核验"),
     INVALID_TASK_STATE(HttpStatus.CONFLICT, "当前任务状态不允许该操作"),
     TOO_MANY_TASKS(HttpStatus.TOO_MANY_REQUESTS, "进行中的任务过多，请稍后再试"),
     RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "请求过于频繁，请稍后再试"),
