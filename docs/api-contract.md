@@ -264,7 +264,25 @@ V2 新业务接口统一放在 `/api/v2` 下，原有 V1 路径保持不变。
 
 **交付包**：`00_交付说明.txt`、`01_汇总表/汇总.xlsx`（填写 XLSX 模板或自动生成）、`02_个人表/<序号>_<姓名>.docx`（DOCX 模板中的 `{{字段}}` / `${字段}` 占位符，即使被 Word 拆进多个 run 也能替换）、`03_材料/<序号>_<姓名>/<命名规则>.<扩展名>`（可选附带 `原始素材/`）、`90_校验报告/manifest.csv · exceptions.csv · verification.json`、`sha256sums.txt`。生成时读取不可变快照。XLSX 写入区域已有内容或公式时拒绝覆盖，并报出具体单元格坐标；所有值按文本写入，CSV 中以 `= + - @` 开头的单元格会加前缀 `'`。打包前会回读核验：汇总表行数、个人表中有数据的占位符是否全部替换、校验和。存在缺交或不合格项时 `result.overall` 为 `PARTIAL_SUCCESS`。
 
-## 14. 智能模式 `/api/ai`（新增）
+## 14. 学习播放器 `/api/v2/lessons`（V2）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/capabilities` | `{asr{configured, provider, model}, ocr, llm, maxDurationMin}`，只返回是否就绪和模型名，不返回任何 Key |
+| POST | `/` | `{videoFileId}` + `Idempotency-Key` → 202 任务（`lesson.analyze`）；语音识别或 DeepSeek 未配置时返回 503，不会创建任务 |
+| GET | `/` | `{items[{id, title, videoFileId, duration, nodes, snippets, createdAt}]}` |
+| GET | `/{id}` | `{lesson{title, summary, duration, nodes[], snippets[]}, transcript[{begin, end, text}], screen[{t, text}], meta{asrModel, llmModel, promptVersion, frames, ocrFrames, warnings[]}}` |
+| POST | `/{id}/ticket` | `{frameUrl}`：证据帧的图片地址模板（`{frame}` 替换为帧文件名），10 分钟有效，只对这节课有效 |
+| GET | `/{id}/frames/{frame}?ticket=` | 证据帧 JPEG |
+| DELETE | `/{id}` | 删除分析结果和证据帧；原视频保留 |
+
+**处理流程**（任务阶段名即 `stage`）：提取音轨（16 kHz 单声道 MP3）→ 语音识别（阿里云百炼 Paraformer，录音文件识别：先通过 `getPolicy` 上传到百炼的临时存储得到 `oss://` 地址，再提交异步任务并轮询，结果为毫秒级的句子时间戳）→ 抽取关键帧（默认每 3 秒 1 帧，最多 1200 帧）→ 画面文字识别（本机 RapidOCR，相邻帧画面相同时复用上一帧的结果）→ 整理知识大纲（DeepSeek，模型只能通过一个工具提交结果，校验失败时自动修正 1 次）→ 保存。
+
+**校验**：每个节点的时间都必须在视频时长内，且 `end > start`；节点必须构成合法的树（父节点存在、无环、最多 3 层）；子节点超出父节点的时间范围时会被收拢进去，并给出提示。每个代码片段会和时间范围前后 30 秒内的画面文字逐行比对：`ocrSupport` 是画面上能找到的代码行占比；`source` 为 `SCREEN`（≥ 0.7，画面识别）、`SCREEN_COMPLETED`（0.3–0.7，画面识别 + AI 补全）或 `MODEL`（< 0.3，AI 根据讲解整理，同时给出警告）；`evidenceFrame` 是匹配行数最多的那一帧。画面文字的缩进按 OCR 文字框的左边界、以字符宽度为单位还原。
+
+**沙盒**（浏览器端）：Python 使用本站提供的 Pyodide（`/pyodide/`），JavaScript 在独立的 Web Worker 中运行。用户代码执行前会移除 `fetch`、`XMLHttpRequest`、`WebSocket`、`importScripts` 等能力，Worker 本身也没有 DOM；超时（JS 3 秒、Python 10 秒）后直接终止 Worker；输出超过 20,000 字符会被截断。
+
+## 15. 智能模式 `/api/ai`（新增）
 
 DeepSeek 只在后端调用，浏览器不会接触到 Key。未配置 Key 时，`POST /messages` 返回 `503 AI_UNAVAILABLE`。
 

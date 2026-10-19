@@ -17,6 +17,9 @@
 | 图片 | 批量压缩（JPG/WebP/AVIF 可按目标体积压缩）、改尺寸、转格式；处理前后对比；AI 抠图 | ImageMagick · rembg |
 | 文档 | 多张图片合并为 PDF；PDF 转图片 | ImageMagick · Ghostscript |
 | 隐私 | 查看元数据、编辑标题/作者/拍摄时间/GPS（按格式的真实能力开放字段）；一键清除位置信息或全部元数据，并独立核验 | ExifTool · FFmpeg |
+| 文档 · V2 | Word / Excel / 网页转 PDF，上传前校验文档结构，转换后核验 PDF | LibreOffice · Chromium · PDFBox |
+| 材料规范官 · V2 | 粘贴比赛通知自动提取材料规范；拖入整个文件夹后自动匹配到人、检查、修正，并按模板生成交付包 | DeepSeek · Apache POI · 上述引擎 |
+| 学习播放器 · V2 | 教学视频 → 随播放生长的知识图谱；讲到代码时，代码出现在浏览器沙盒中，可以直接运行 | 阿里云百炼 · RapidOCR · DeepSeek · Pyodide · Monaco |
 | 智能模式 | 需求理解 → 任务规划 → **用户确认** → 执行 → 质量审核；过程实时可见，可断线续传 | DeepSeek |
 
 ## 快速开始（Windows 10 / 11）

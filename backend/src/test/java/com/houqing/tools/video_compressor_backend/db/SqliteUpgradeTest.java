@@ -38,14 +38,14 @@ class SqliteUpgradeTest {
         var result = Flyway.configure().dataSource(url, null, null).locations("classpath:db/migration/sqlite")
                 .baselineOnMigrate(true).baselineVersion("0").load().migrate();
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isEqualTo(1);
+        assertThat(result.migrationsExecuted).isEqualTo(2); // V1 baseline + V2 lessons
 
         try (Connection c = DriverManager.getConnection(url); Statement s = c.createStatement()) {
             try (ResultSet rs = s.executeQuery("SELECT display_name FROM users WHERE username = 'OLD'")) {
                 assertThat(rs.next()).isTrue();
                 assertThat(rs.getString(1)).isEqualTo("老用户"); // data kept, NOCASE kept
             }
-            for (String table : new String[]{"media_files", "ai_events", "spec_projects", "spec_items"}) {
+            for (String table : new String[]{"media_files", "ai_events", "spec_projects", "spec_items", "lessons"}) {
                 try (ResultSet rs = s.executeQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='" + table + "'")) {
                     assertThat(rs.next()).as(table).isTrue();
                 }

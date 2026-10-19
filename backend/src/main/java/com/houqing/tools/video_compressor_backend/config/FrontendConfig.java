@@ -37,9 +37,19 @@ public class FrontendConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/assets/**")
                 .addResourceLocations(location + "assets/")
                 .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic().immutable());
+        // Python sandbox runtime (WebAssembly CPython), same origin so no CDN is involved
+        registry.addResourceHandler("/pyodide/**")
+                .addResourceLocations(location + "pyodide/")
+                .setCacheControl(CacheControl.maxAge(30, TimeUnit.DAYS).cachePublic());
         registry.addResourceHandler("/index.html", "/favicon.svg")
                 .addResourceLocations(location)
                 .setCacheControl(CacheControl.noCache());
+    }
+
+    /** .wasm must be served as application/wasm for streaming compilation in the browser. */
+    @Override
+    public void configureContentNegotiation(org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer c) {
+        c.mediaType("wasm", org.springframework.http.MediaType.parseMediaType("application/wasm"));
     }
 
     /** SPA routes: forward to index.html so a refresh on /workspace/... (or the legacy /studio) works. */

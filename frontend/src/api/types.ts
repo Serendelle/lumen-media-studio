@@ -15,6 +15,7 @@ export type TaskType =
   | 'metadata.modify'
   | 'document.convert'
   | 'spec.deliver'
+  | 'lesson.analyze'
 
 export interface UserView {
   id: number
@@ -359,3 +360,67 @@ export interface SpecDraft {
   rounds: number
 }
 
+
+// ---------------- 学习播放器 (/api/v2/lessons) ----------------
+
+export interface LessonNode {
+  id: string
+  parentId: string | null
+  title: string
+  summary: string
+  start: number
+  end: number
+  keywords: string[]
+}
+
+export interface LessonSnippet {
+  id: string
+  title: string
+  language: 'python' | 'javascript' | 'text'
+  start: number
+  end: number
+  code: string
+  explanation: string
+  runnable: boolean
+  /** share of the code lines OCR saw on screen near this time (0..1) */
+  ocrSupport: number
+  /** SCREEN = recognised from the video; SCREEN_COMPLETED = recognised + completed by AI; MODEL = written by AI from the narration */
+  source: 'SCREEN' | 'SCREEN_COMPLETED' | 'MODEL'
+  evidenceTime?: number
+  evidenceFrame?: string
+}
+
+export interface LessonData {
+  title: string
+  summary: string
+  duration: number
+  nodes: LessonNode[]
+  snippets: LessonSnippet[]
+}
+
+export interface LessonView {
+  id: string
+  videoFileId: string
+  lesson: LessonData
+  transcript: { begin: number; end: number; text: string }[]
+  screen: { t: number; text: string }[]
+  meta: { asrModel: string; llmModel: string; promptVersion: string; warnings: string[]; frames: number; ocrFrames: number }
+  createdAt: number
+}
+
+export interface LessonSummary {
+  id: string
+  title: string
+  videoFileId: string
+  duration: number
+  nodes: number
+  snippets: number
+  createdAt: number
+}
+
+export interface LessonCapabilities {
+  asr: { configured: boolean; provider: string; model: string }
+  ocr: boolean
+  llm: boolean
+  maxDurationMin: number
+}

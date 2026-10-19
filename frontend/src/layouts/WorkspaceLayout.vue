@@ -22,6 +22,7 @@ const NAV: { to: string; label: string; icon: string; exact?: boolean }[] = [
   { to: '/workspace/media', label: '媒体工作台', icon: 'film' },
   { to: '/workspace/documents', label: '文档工作台', icon: 'pdf' },
   { to: '/workspace/specs', label: '材料规范官', icon: 'check' },
+  { to: '/workspace/learn', label: '学习播放器', icon: 'spark' },
   { to: '/workspace/files', label: '我的文件', icon: 'folder' },
   { to: '/workspace/tasks', label: '任务中心', icon: 'list' },
 ]

@@ -29,6 +29,8 @@ export default defineConfig({
       '/actuator': { target: backend, changeOrigin: false },
     },
   },
+  // sandbox workers are ES modules: the Python worker imports the Pyodide runtime from /pyodide at run time
+  worker: { format: 'es' },
   build: {
     target: 'es2022',
     cssCodeSplit: true,

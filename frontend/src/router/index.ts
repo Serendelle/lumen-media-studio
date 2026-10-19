@@ -19,6 +19,8 @@ const router = createRouter({
         { path: 'documents', name: 'documents', component: () => import('@/views/DocumentWorkspaceView.vue'), meta: { title: '文档工作台 · Lumen' } },
         { path: 'specs', name: 'specs', component: () => import('@/views/SpecListView.vue'), meta: { title: '材料规范官 · Lumen' } },
         { path: 'specs/:id', name: 'spec', component: () => import('@/views/SpecDeskView.vue'), meta: { title: '材料规范官 · Lumen' } },
+        { path: 'learn', name: 'learn', component: () => import('@/views/LessonListView.vue'), meta: { title: '学习播放器 · Lumen' } },
+        { path: 'learn/:id', name: 'lesson', component: () => import('@/views/LessonPlayerView.vue'), meta: { title: '学习播放器 · Lumen' } },
         { path: 'files', name: 'files', component: () => import('@/views/FileLibraryView.vue'), meta: { title: '我的文件 · Lumen' } },
         { path: 'tasks', name: 'tasks', component: () => import('@/views/TaskCenterView.vue'), meta: { title: '任务中心 · Lumen' } },
       ],

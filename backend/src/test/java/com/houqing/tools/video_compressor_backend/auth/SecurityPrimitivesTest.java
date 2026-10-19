@@ -28,7 +28,7 @@ class SecurityPrimitivesTest {
     @Test
     void ticketFromAnotherSecretIsRejected() {
         var other = new DownloadTicketService(new JwtService(new com.houqing.tools.video_compressor_backend.config.AppProperties(
-                "x", 24, null, null, new com.houqing.tools.video_compressor_backend.config.AppProperties.Security("different", 1, true), null, null)));
+                "x", 24, null, null, new com.houqing.tools.video_compressor_backend.config.AppProperties.Security("different", 1, true), null, null, null, null)));
         assertThat(tickets.verify(other.issue(7, "file-a").value(), "file-a")).isEmpty();
     }
 

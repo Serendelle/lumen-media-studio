@@ -12,6 +12,7 @@ export const TASK_LABEL: Record<TaskType, string> = {
   'metadata.modify': '元数据编辑',
   'document.convert': '文档转换',
   'spec.deliver': '生成交付包',
+  'lesson.analyze': '课程分析',
 }
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -71,5 +72,8 @@ export const ERROR_HINT: Record<string, string> = {
   DOCUMENT_CONVERSION_FAILED: '转换引擎没有生成有效的 PDF，可以重试；反复失败请检查原文档能否正常打开。',
   DOCUMENT_CONVERSION_TIMEOUT: '转换超过 120 秒被中止，文档可能过大或过于复杂，可拆分后再转换。',
   CONVERTER_UNAVAILABLE: '服务器未安装对应的转换引擎（LibreOffice 或 Chrome / Edge）。',
+  ASR_UNAVAILABLE: '语音识别未配置或暂时不可用：在后端 .env 中设置 DASHSCOPE_API_KEY，或检查网络与阿里云账户。',
+  ASR_FAILED: '语音识别没有成功（例如音频无法下载或没有讲话声），可以重试。',
+  LESSON_INVALID: 'AI 整理出的课程结构没有通过时间与结构校验，可以重试一次。',
   OUTPUT_INVALID: '输出没有通过独立核验（见下方检查项），可以重试；反复出现请换一种输出格式。',
 }

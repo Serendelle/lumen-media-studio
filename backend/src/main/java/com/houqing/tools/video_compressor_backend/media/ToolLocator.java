@@ -56,6 +56,8 @@ public class ToolLocator {
             // soffice.com is the console launcher: it waits for the conversion and returns its exit code
             case SOFFICE -> single(t.soffice(), WINDOWS ? "soffice.com" : "soffice", officeCandidates());
             case CHROMIUM -> single(t.chromium(), WINDOWS ? "chrome" : "chromium", chromiumCandidates());
+            // a dedicated environment, never the system "python" on PATH (which may not have RapidOCR)
+            case OCR -> ocrPython(t.ocrPython());
         };
         log.info("Tool {} -> {}", tool.label(), r.map(c -> String.join(" ", c)).orElse("NOT FOUND"));
         return r;
@@ -132,6 +134,19 @@ public class ToolLocator {
                 .flatMap(dir -> globExe(dir, "ffmpeg-*", "bin/" + exe + ".exe").stream()).toList());
         out.add(localAppData().resolve("Microsoft/WinGet/Links/" + exe + ".exe"));
         return out;
+    }
+
+    private static Optional<List<String>> ocrPython(String configured) {
+        if (configured != null && !configured.isBlank()) {
+            Path p = Path.of(configured);
+            return Files.isRegularFile(p) ? Optional.of(List.of(p.toString())) : Optional.empty();
+        }
+        String exe = WINDOWS ? "Scripts/python.exe" : "bin/python";
+        for (Path root : List.of(Path.of("D:/LumenTools/ocr-venv"), Path.of("C:/LumenTools/ocr-venv"),
+                Path.of(System.getProperty("user.home"), ".lumen", "ocr-venv"))) {
+            if (Files.isRegularFile(root.resolve(exe))) return Optional.of(List.of(root.resolve(exe).toString()));
+        }
+        return Optional.empty();
     }
 
     private static List<Path> officeCandidates() {

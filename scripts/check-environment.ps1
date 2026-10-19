@@ -116,6 +116,10 @@ $browser = @('C:\Program Files\Google\Chrome\Application\chrome.exe', "$LocalApp
 if ($browser) { Write-Row 'Chrome / Edge' '可用' $browser 'ok' }
 else { Write-Row 'Chrome / Edge' '未找到（可选）' 'HTML 转 PDF 不可用' 'warn'; $script:Warn++ }
 
+$ocr = @('D:\LumenTools\ocr-venv\Scripts\python.exe', 'C:\LumenTools\ocr-venv\Scripts\python.exe', "$env:USERPROFILE\.lumen\ocr-venv\Scripts\python.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+if ($ocr) { Write-Row 'RapidOCR' '可用' $ocr 'ok' }
+else { Write-Row 'RapidOCR' '未安装（可选）' '学习播放器无法识别画面文字；见 docs/deployment.md 第 10 节' 'warn'; $script:Warn++ }
+
 $rembg = $null
 foreach ($base in @("$env:USERPROFILE\miniconda3", "$env:USERPROFILE\anaconda3", "$LocalAppData\miniconda3", 'C:\ProgramData\miniconda3')) {
     $cand = Join-Path $base 'envs\rembg-env\Scripts\rembg.exe'
@@ -138,6 +142,14 @@ if ($keyFromFile -or $keyFromEnv) {
     $src = if ($keyFromEnv) { '系统环境变量' } else { '.env' }
     Write-Row 'DeepSeek Key' '已配置' "来源：$src（值不显示）" 'ok'
 } else { Write-Row 'DeepSeek Key' '未配置（可选）' '智能模式不可用；在 .env 中填写 DEEPSEEK_API_KEY' 'warn'; $script:Warn++ }
+$asrFromFile = $false
+if (Test-Path $envFile) {
+    $line = Select-String -Path $envFile -Pattern '^\s*DASHSCOPE_API_KEY\s*=\s*(\S+)' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($line -and $line.Matches[0].Groups[1].Value -notmatch 'your-key|change-me') { $asrFromFile = $true }
+}
+$asrFromEnv = -not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable('DASHSCOPE_API_KEY'))
+if ($asrFromFile -or $asrFromEnv) { Write-Row '百炼 Key' '已配置' '学习播放器语音识别（值不显示）' 'ok' }
+else { Write-Row '百炼 Key' '未配置（可选）' '学习播放器不可用；在 .env 中填写 DASHSCOPE_API_KEY' 'warn'; $script:Warn++ }
 
 $busy = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
 if ($busy) {

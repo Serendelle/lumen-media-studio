@@ -6,6 +6,9 @@ import type {
   DocumentInspection,
   PdfPagePreview,
   MaterialSpec,
+  LessonCapabilities,
+  LessonSummary,
+  LessonView,
   SpecBoard,
   SpecDraft,
   SpecItem,
@@ -66,6 +69,17 @@ export const specsApi = {
   deliver: (id: string, onlyComplete: boolean, includeOriginals: boolean) =>
     postJson<{ taskId: string; status: string }>(`${sp(id)}/deliveries`, { onlyComplete, includeOriginals }, withKey()),
   deliveries: (id: string) => getJson<TaskView[]>(`${sp(id)}/deliveries`),
+}
+
+const ls = (id: string) => `/api/v2/lessons/${encodeURIComponent(id)}`
+
+export const lessonsApi = {
+  capabilities: () => getJson<LessonCapabilities>('/api/v2/lessons/capabilities'),
+  list: () => getJson<{ items: LessonSummary[] }>('/api/v2/lessons'),
+  get: (id: string) => getJson<LessonView>(ls(id)),
+  analyze: (videoFileId: string) => postJson<{ taskId: string; status: string }>('/api/v2/lessons', { videoFileId }, withKey()),
+  remove: (id: string) => http.delete(ls(id)),
+  ticket: (id: string) => postJson<{ ticket: string; frameUrl: string; expiresAt: number }>(`${ls(id)}/ticket`),
 }
 
 export const compareApi = {

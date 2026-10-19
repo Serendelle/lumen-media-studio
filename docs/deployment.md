@@ -144,3 +144,19 @@ java -jar backend\target\video-compressor-backend-1.0.0.jar
    恢复后启动服务，Flyway 会核对迁移版本。建议恢复到一台测试机上，确认能登录、能下载历史结果后，才算一次有效的恢复演练。
 
 **目前尚未完成的生产项**：上面的备份/恢复流程还没有在真实的 PostgreSQL 服务器上演练过；病毒扫描（ClamAV）、公开接口限流和数据加密原本是为"公开表单"设计的，材料规范官目前没有对公网开放的入口，等以后加入"投稿自检链接"这类公开入口时再实现。
+
+## 10. 学习播放器（可选）
+
+需要三项：
+
+1. **阿里云百炼 API Key**（语音识别）：在百炼控制台创建 API Key，写入 `.env` 的 `DASHSCOPE_API_KEY=`（默认模型 `paraformer-v2`，可以用 `DASHSCOPE_ASR_MODEL` 修改）。音频会上传到百炼的临时存储，48 小时后自动删除。百炼说明这种临时存储只适合开发测试；正式上线、用量较大时，应改为上传到自己的 OSS。
+2. **本地 OCR**（RapidOCR）：建一个独立的 Python 环境，可以放在 D 盘以节省 C 盘空间。复用系统里已安装的 onnxruntime，约占 170MB：
+   ```powershell
+   python -m venv --system-site-packages D:\LumenTools\ocr-venv
+   D:\LumenTools\ocr-venv\Scripts\python.exe -m pip install rapidocr
+   ```
+   后端会自动在 `D:\LumenTools\ocr-venv` 中查找。放在别处时，在 `.env` 中设置 `OCR_PYTHON=` 为该环境的 python.exe。第一次识别时会下载模型（几十 MB）。
+3. **DeepSeek Key**：与智能模式共用。
+
+代码沙盒运行在浏览器里，Pyodide 运行时随前端一起构建（`npm run build` 会把它复制到 `dist/pyodide/`，约 12MB），不依赖任何 CDN。
+
