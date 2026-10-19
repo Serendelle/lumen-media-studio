@@ -16,6 +16,7 @@ const router = createRouter({
       children: [
         { path: '', name: 'workspace', component: () => import('@/views/WorkspaceHomeView.vue'), meta: { title: '概览 · Lumen' } },
         { path: 'media', name: 'media', component: () => import('@/views/MediaWorkspaceView.vue'), meta: { title: '媒体工作台 · Lumen' } },
+        { path: 'documents', name: 'documents', component: () => import('@/views/DocumentWorkspaceView.vue'), meta: { title: '文档工作台 · Lumen' } },
         { path: 'files', name: 'files', component: () => import('@/views/FileLibraryView.vue'), meta: { title: '我的文件 · Lumen' } },
         { path: 'tasks', name: 'tasks', component: () => import('@/views/TaskCenterView.vue'), meta: { title: '任务中心 · Lumen' } },
       ],

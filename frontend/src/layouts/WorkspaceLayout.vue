@@ -20,6 +20,7 @@ const toast = useToast()
 const NAV: { to: string; label: string; icon: string; exact?: boolean }[] = [
   { to: '/workspace', label: '概览', icon: 'grid', exact: true },
   { to: '/workspace/media', label: '媒体工作台', icon: 'film' },
+  { to: '/workspace/documents', label: '文档工作台', icon: 'pdf' },
   { to: '/workspace/files', label: '我的文件', icon: 'folder' },
   { to: '/workspace/tasks', label: '任务中心', icon: 'list' },
 ]

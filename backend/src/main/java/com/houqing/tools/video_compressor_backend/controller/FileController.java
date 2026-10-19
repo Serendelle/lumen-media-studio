@@ -38,7 +38,7 @@ public class FileController {
     @PostMapping("/upload")
     public FileView upload(@RequestParam("file") MultipartFile file) {
         MediaFile mf = uploads.upload(CurrentUser.id(), file,
-                Set.of(MediaKind.VIDEO, MediaKind.AUDIO, MediaKind.IMAGE, MediaKind.PDF));
+                Set.of(MediaKind.VIDEO, MediaKind.AUDIO, MediaKind.IMAGE, MediaKind.PDF, MediaKind.DOCUMENT));
         return uploads.view(mf);
     }
 

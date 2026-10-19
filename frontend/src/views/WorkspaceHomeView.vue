@@ -35,6 +35,7 @@ const QUICK = [
   { to: { path: '/workspace/media', query: { mode: 'pro', tool: 'compress' } }, icon: 'compress', label: '按目标体积压缩视频' },
   { to: { path: '/workspace/media', query: { mode: 'pro', tool: 'audio' } }, icon: 'audio', label: '从视频提取音轨' },
   { to: { path: '/workspace/media', query: { mode: 'pro', tool: 'image' } }, icon: 'image', label: '批量处理图片' },
+  { to: { path: '/workspace/documents' }, icon: 'pdf', label: 'Word / Excel / 网页转 PDF' },
   { to: { path: '/workspace/media', query: { mode: 'ai' } }, icon: 'spark', label: '用一句话描述需求' },
 ]
 </script>

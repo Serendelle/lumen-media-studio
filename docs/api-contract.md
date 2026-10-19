@@ -206,7 +206,37 @@ V2 新业务接口统一放在 `/api/v2` 下，原有 V1 路径保持不变。
 - `GET /api/v2/media/compare?sourceFileId&outputFileId`（需登录，两个文件都必须属于当前用户，否则 404）：`{source, output, deltaBytes, savedPercent?, durationDeltaMs?}`，每侧为 `{fileId, filename, mediaType, sizeBytes, readable, measured{…同上}}`，全部为当场检测的数据。
 - `GET /api/v2/workspace/summary`（需登录）：`{tasksByStatus{QUEUED,RUNNING,SUCCEEDED,FAILED,CANCELLED}, inputs{count,bytes}, outputs{count,bytes}, nextExpiryAt?, recentTasks[TaskView ×5], recentFiles[FileView ×5]}`。全部数字由数据库按当前用户聚合，不含任何其他用户的数据。
 
-## 12. 智能模式 `/api/ai`（新增）
+## 12. 文档工作台 `/api/v2/documents`（V2）
+
+文档通过 `POST /api/files/upload` 上传，`mediaType` 为 `DOCUMENT`（PDF 仍为 `PDF`），`info` 含 `format` 与 `sha256`。上传检查：
+
+| 输入 | 限制与校验 |
+|---|---|
+| `.docx` / `.xlsx` | ≤ 30 MB；按 OOXML 包结构判断真实格式（必须有 `[Content_Types].xml` 与 `word/document.xml` 或 `xl/workbook.xml`，并与扩展名一致）；条目 ≤ 5000、解压后 ≤ 原大小 100 倍且 ≤ 250 MiB、无 `../`/绝对路径；拒绝宏（`.docm/.xlsm`、`vbaProject.bin`）、DTD/实体、会主动加载外部内容的关系（超链接除外） |
+| `.html` | 单文件、≤ 5 MB、严格 UTF-8 |
+| PDF | 沿用原有类型；需要打开密码时返回 422 `DOCUMENT_PASSWORD_REQUIRED` |
+
+错误码：415 `UNSUPPORTED_DOCUMENT`（伪装、宏、旧版 .doc/.xls、非 UTF-8）；422 `DOCUMENT_CORRUPTED`（结构损坏、压缩炸弹、路径穿越）、`DOCUMENT_PASSWORD_REQUIRED`（加密的 docx/xlsx/PDF）、`DOCUMENT_CONVERSION_FAILED`、`DOCUMENT_CONVERSION_TIMEOUT`（超过 120 秒）；503 `CONVERTER_UNAVAILABLE`。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/matrix` | `{routes[{from, to, engine, available, taskType}], notSupported[]}`：本机当前真实可用的转换路线 |
+| POST | `/convert` | `{sourceFileId, targetFormat: "pdf", options}` + `Idempotency-Key` → 202 `{taskId, status, statusUrl}`（任务类型 `document.convert`） |
+| GET | `/{fileId}/inspect` | 结构信息：docx `{paragraphs, tables[], pageSize, fonts[], missingFonts[]}`；xlsx `{sheets[{name, hidden, usedRows, usedCols, mergedRegions, printArea?, landscape}], fonts[], missingFonts[]}`；html `{title, willRemove{…}}`；pdf `{pageCount, pageSize, fonts[]}`；均含 `warnings[]` |
+| GET | `/{fileId}/preview?page=1` | 仅 PDF：`{page, pageCount, pageSize, imageTicketUrl, expiresAt}`，页码越界返回 400 |
+| GET | `/{fileId}/preview/{page}.png?ticket=` | 页面 PNG；票据只对该文件有效，10 分钟过期 |
+
+`options`（不接受其它键）：
+
+- HTML：`pageSize` `A4`（默认）| `ORIGINAL`，`orientation` `PORTRAIT` | `LANDSCAPE`，`marginMm` 0–30（默认 10）。
+- XLSX：`sheetNames[]`（默认输出全部未隐藏的工作表；名称不存在返回 400，并在 `details.fields.sheetNames` 中列出可选名称）。
+- DOCX / XLSX 沿用文档自身的页面设置，传入纸张、方向或边距会返回 400。
+
+引擎：DOCX/XLSX 使用 LibreOffice headless，HTML 使用本机 Chrome / Edge 的 headless 模式。每个任务使用独立的配置目录，输入文件先复制再处理。HTML 先经过清洗（移除脚本、事件属性、iframe/object、外部样式与任何非 `data:` 的资源链接），再注入 `default-src 'none'` 的 CSP，浏览器启动时把所有域名解析指向无效地址并配置不可达的代理，因此无法访问网络或本地文件。
+
+转换结果 `result`：`{sourceFormat, targetFormat, engine, pages, pageSize, outputSize, warnings[], removed?{…}, sheets?[], verification}`。`verification` 检查 PDF 文件头、非空、页数 ≥ 1、首页和末页可渲染（空白页只记为提示，不判失败）。缺少的字体会写入 `warnings`，不会假装版式没有变化。
+
+## 13. 智能模式 `/api/ai`（新增）
 
 DeepSeek 只在后端调用，浏览器不会接触到 Key。未配置 Key 时，`POST /messages` 返回 `503 AI_UNAVAILABLE`。
 

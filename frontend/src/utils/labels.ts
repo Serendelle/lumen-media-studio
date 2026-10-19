@@ -10,6 +10,7 @@ export const TASK_LABEL: Record<TaskType, string> = {
   'pdf.process': 'PDF 转换',
   'metadata.scrub': '隐私清理',
   'metadata.modify': '元数据编辑',
+  'document.convert': '文档转换',
 }
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -23,7 +24,8 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
 const STAGE_LABEL: Record<string, string> = {
   encoding: '编码中',
   analyzing: '第一遍分析',
-  converting: '转码中',
+  converting: '转换中',
+  preparing: '准备中',
   watermarking: '叠加水印',
   extracting: '提取音轨',
   'loading-model': '加载模型',
@@ -58,5 +60,11 @@ export const ERROR_HINT: Record<string, string> = {
   CANCELLED: '任务已被取消，可以重试。',
   TARGET_NOT_MET: '已自动降码率重试一次仍超出目标：调大目标体积、降低分辨率或去掉音频后重新提交。原文件未受影响。',
   AUDIO_STREAM_MISSING: '这个文件没有音轨，换一个含声音的视频或音频文件。',
+  UNSUPPORTED_DOCUMENT: '只支持 .docx、.xlsx、单个 UTF-8 的 .html 和 PDF；旧版 .doc/.xls 请先另存为新格式。',
+  DOCUMENT_CORRUPTED: '文档结构损坏或可疑（例如压缩炸弹、非法路径），请用 Office 重新另存后上传。',
+  DOCUMENT_PASSWORD_REQUIRED: '文档设置了打开密码，请先在 Office / PDF 软件中取消密码后再上传。',
+  DOCUMENT_CONVERSION_FAILED: '转换引擎没有生成有效的 PDF，可以重试；反复失败请检查原文档能否正常打开。',
+  DOCUMENT_CONVERSION_TIMEOUT: '转换超过 120 秒被中止，文档可能过大或过于复杂，可拆分后再转换。',
+  CONVERTER_UNAVAILABLE: '服务器未安装对应的转换引擎（LibreOffice 或 Chrome / Edge）。',
   OUTPUT_INVALID: '输出没有通过独立核验（见下方检查项），可以重试；反复出现请换一种输出格式。',
 }

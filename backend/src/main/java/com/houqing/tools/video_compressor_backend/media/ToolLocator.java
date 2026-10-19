@@ -53,6 +53,9 @@ public class ToolLocator {
             case MAGICK -> single(t.magick(), "magick", globExe(Path.of("C:/Program Files"), "ImageMagick-*", "magick.exe"));
             case GHOSTSCRIPT -> single(t.ghostscript(), WINDOWS ? "gswin64c" : "gs", ghostscriptCandidates());
             case REMBG -> rembg(t);
+            // soffice.com is the console launcher: it waits for the conversion and returns its exit code
+            case SOFFICE -> single(t.soffice(), WINDOWS ? "soffice.com" : "soffice", officeCandidates());
+            case CHROMIUM -> single(t.chromium(), WINDOWS ? "chrome" : "chromium", chromiumCandidates());
         };
         log.info("Tool {} -> {}", tool.label(), r.map(c -> String.join(" ", c)).orElse("NOT FOUND"));
         return r;
@@ -129,6 +132,27 @@ public class ToolLocator {
                 .flatMap(dir -> globExe(dir, "ffmpeg-*", "bin/" + exe + ".exe").stream()).toList());
         out.add(localAppData().resolve("Microsoft/WinGet/Links/" + exe + ".exe"));
         return out;
+    }
+
+    private static List<Path> officeCandidates() {
+        List<Path> out = new ArrayList<>();
+        for (String root : List.of("C:/Program Files/LibreOffice", "D:/LibreOffice", "D:/Program Files/LibreOffice",
+                "C:/Program Files (x86)/LibreOffice")) {
+            out.add(Path.of(root, "program", WINDOWS ? "soffice.com" : "soffice"));
+        }
+        out.add(Path.of("/usr/bin/soffice"));
+        out.add(Path.of("/Applications/LibreOffice.app/Contents/MacOS/soffice"));
+        return out;
+    }
+
+    /** Chrome first, then Edge (present on every Windows 10/11), so HTML -> PDF needs no extra download. */
+    private static List<Path> chromiumCandidates() {
+        return List.of(
+                Path.of("C:/Program Files/Google/Chrome/Application/chrome.exe"),
+                localAppData().resolve("Google/Chrome/Application/chrome.exe"),
+                Path.of("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"),
+                Path.of("C:/Program Files/Microsoft/Edge/Application/msedge.exe"),
+                Path.of("/usr/bin/chromium"), Path.of("/usr/bin/chromium-browser"), Path.of("/usr/bin/google-chrome"));
     }
 
     private List<Path> ghostscriptCandidates() {

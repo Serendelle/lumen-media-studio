@@ -50,7 +50,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/system/**", "/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // downloads authorize with either a bearer token or a signed short-lived ticket (checked in controller)
-                        .requestMatchers(HttpMethod.GET, "/api/video/download/**", "/api/files/*/content").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/video/download/**", "/api/files/*/content",
+                                "/api/v2/documents/*/preview/*").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         // the built frontend (index.html, hashed assets, SPA routes) is public static content
                         .requestMatchers(HttpMethod.GET, "/**").permitAll()

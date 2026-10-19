@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import type { TaskView, Verification } from '@/api/types'
 import VideoCompare from '@/components/media/VideoCompare.vue'
 import VerificationCard from '@/components/media/VerificationCard.vue'
+import DocumentPreview from '@/components/document/DocumentPreview.vue'
 import { previewUrl, downloadFile } from '@/utils/download'
 import { bytes } from '@/utils/format'
 import { TASK_LABEL } from '@/utils/labels'
@@ -49,7 +50,7 @@ watch(
             outUrl: i.outputFileId ? await previewUrl(i.outputFileId).catch(() => undefined) : undefined,
           })),
         )
-      } else if (t.output && t.output.mediaType !== 'ARCHIVE' && !compareSource.value) {
+      } else if (t.output && t.output.mediaType !== 'ARCHIVE' && t.output.mediaType !== 'PDF' && !compareSource.value) {
         outUrl.value = await previewUrl(t.output.fileId)
       }
     } catch (e) {
@@ -112,6 +113,17 @@ const current = computed(() => items.value[active.value])
         </div>
       </template>
 
+      <template v-else-if="kind === 'PDF' && task.output">
+        <ul v-if="task.result?.warnings?.length" class="warns">
+          <li v-for="w in task.result.warnings" :key="w">{{ w }}</li>
+        </ul>
+        <DocumentPreview :file-id="task.output.fileId" />
+        <div class="acts">
+          <span class="mono meta">{{ task.output.filename }} · {{ bytes(task.output.sizeBytes) }}</span>
+          <button type="button" class="btn btn--sm" @click="downloadFile(task.output!.fileId, task.output!.filename)">下载</button>
+        </div>
+      </template>
+
       <template v-else-if="compareSource && task.output">
         <VideoCompare :source-file-id="compareSource" :output-file-id="task.output.fileId" :output-name="task.output.filename" />
         <div class="acts">
@@ -124,7 +136,6 @@ const current = computed(() => items.value[active.value])
         <video v-if="kind === 'VIDEO'" :src="outUrl" controls playsinline class="media" />
         <audio v-else-if="kind === 'AUDIO'" :src="outUrl" controls class="audio" />
         <img v-else-if="kind === 'IMAGE'" :src="outUrl" :alt="task.output?.filename" class="media checker" />
-        <p v-else-if="kind === 'PDF'" class="loading">PDF 出于安全考虑以附件形式提供，请下载后查看。</p>
         <div class="acts">
           <span class="mono meta">{{ task.output?.filename }} · {{ bytes(task.output?.sizeBytes) }}</span>
           <button v-if="task.output" type="button" class="btn btn--sm" @click="downloadFile(task.output!.fileId, task.output!.filename)">下载</button>
@@ -201,6 +212,15 @@ figure img,
   place-items: center;
   color: var(--text-3);
   font-size: var(--fs-sm);
+}
+.warns {
+  margin: 0;
+  padding: 10px 12px 10px 28px;
+  border-radius: var(--r-sm);
+  background: var(--apricot);
+  color: var(--apricot-ink);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
 }
 .partial {
   padding: 10px 12px;

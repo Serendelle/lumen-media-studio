@@ -32,6 +32,8 @@ powershell -ExecutionPolicy Bypass -File scripts\start-windows.ps1       # 启�
 | ExifTool | ✅ | 元数据与隐私 | `winget install OliverBetz.ExifTool` |
 | ImageMagick | 可选 | 图片处理、PDF | `winget install ImageMagick.ImageMagick` |
 | Ghostscript | 可选 | PDF | winget 上没有官方包：从 [GitHub ArtifexSoftware/ghostpdl-downloads](https://github.com/ArtifexSoftware/ghostpdl-downloads/releases) 下载 `gs*w64.exe` 安装 |
+| LibreOffice | 可选 | 文档工作台：Word / Excel 转 PDF | `winget install TheDocumentFoundation.LibreOffice`；磁盘紧张时可加 `--location D:\LibreOffice`（后端会自动在该目录查找） |
+| Chrome 或 Edge | 可选 | 文档工作台：HTML 转 PDF | Windows 自带 Edge 即可；后端优先使用 Chrome |
 | Miniconda + rembg | 可选 | AI 抠图 | 见第 4 节 |
 
 安装后**重新打开一个 PowerShell 窗口**，让新的 PATH 生效。后端会自动查找工具：先查 PATH，再查 winget 和常见安装目录，Ghostscript 还会读取注册表。所以一般不需要配置路径；找不到时，可以在 `.env` 里填写 `FFMPEG_PATH=` 等完整路径。

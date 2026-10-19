@@ -2,6 +2,9 @@ import { getJson, http, idempotencyKey, postJson } from './http'
 import type {
   AuthResult,
   CompressionPlan,
+  ConversionMatrix,
+  DocumentInspection,
+  PdfPagePreview,
   FileView,
   MediaCompare,
   MetadataCapability,
@@ -22,6 +25,16 @@ export const authApi = {
     postJson<AuthResult>('/api/auth/register', { username, password, displayName }),
   login: (username: string, password: string) => postJson<AuthResult>('/api/auth/login', { username, password }),
   me: () => getJson<UserView>('/api/auth/me'),
+}
+
+export const documentsApi = {
+  matrix: () => getJson<ConversionMatrix>('/api/v2/documents/matrix'),
+  inspect: (fileId: string) => getJson<DocumentInspection>(`/api/v2/documents/${encodeURIComponent(fileId)}/inspect`),
+  preview: (fileId: string, page = 1) =>
+    getJson<PdfPagePreview>(`/api/v2/documents/${encodeURIComponent(fileId)}/preview`, { params: { page } }),
+  convert: (sourceFileId: string, options: Record<string, unknown>) =>
+    postJson<{ taskId: string; status: string; statusUrl: string }>(
+      '/api/v2/documents/convert', { sourceFileId, targetFormat: 'pdf', options }, withKey()),
 }
 
 export const compareApi = {

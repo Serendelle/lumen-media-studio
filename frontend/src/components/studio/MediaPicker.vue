@@ -78,7 +78,7 @@ function onPick(e: Event) {
 }
 
 function kindLabel(k: MediaKind) {
-  return { VIDEO: '视频', AUDIO: '音频', IMAGE: '图片', PDF: 'PDF', ARCHIVE: '压缩包' }[k]
+  return { VIDEO: '视频', AUDIO: '音频', IMAGE: '图片', PDF: 'PDF', ARCHIVE: '压缩包', DOCUMENT: '文档' }[k]
 }
 
 function describe(f: FileView) {

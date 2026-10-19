@@ -21,7 +21,7 @@ const totalPages = ref(0)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-const KIND_LABEL: Record<MediaKind, string> = { VIDEO: '视频', AUDIO: '音频', IMAGE: '图片', PDF: 'PDF', ARCHIVE: '压缩包' }
+const KIND_LABEL: Record<MediaKind, string> = { VIDEO: '视频', AUDIO: '音频', IMAGE: '图片', PDF: 'PDF', ARCHIVE: '压缩包', DOCUMENT: '文档' }
 
 async function load() {
   loading.value = true
@@ -155,7 +155,7 @@ async function download(f: FileView) {
         <span class="when">{{ relativeTime(f.createdAt) }}</span>
         <span class="exp" :class="{ soon: expiresIn(f.expiresAt).soon }">{{ expiresIn(f.expiresAt).text }}</span>
         <span class="acts">
-          <button v-if="f.mediaType !== 'ARCHIVE' && f.mediaType !== 'PDF'" type="button" class="ib" :aria-label="`预览 ${f.originalFilename}`" @click="openPreview(f)"><Icon name="eye" :size="16" /></button>
+          <button v-if="f.mediaType !== 'ARCHIVE' && f.mediaType !== 'PDF' && f.mediaType !== 'DOCUMENT'" type="button" class="ib" :aria-label="`预览 ${f.originalFilename}`" @click="openPreview(f)"><Icon name="eye" :size="16" /></button>
           <button type="button" class="ib" :aria-label="`下载 ${f.originalFilename}`" @click="download(f)"><Icon name="download" :size="16" /></button>
           <button type="button" class="ib danger" :aria-label="`删除 ${f.originalFilename}`" @click="askDelete(f)"><Icon name="trash" :size="16" /></button>
         </span>

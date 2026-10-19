@@ -63,6 +63,10 @@ public class UploadService {
                 info = summarize(mi);
             } else if (mf.kind() == MediaKind.IMAGE) {
                 info = imageInfo(mf);
+            } else if (mf.kind() == MediaKind.DOCUMENT) {
+                info = mapper.createObjectNode();
+                info.put("format", StorageService.extensionOf(mf.getStoredName()));
+                info.put("sha256", sha256(storage.pathOf(mf)));
             }
             if (info != null) {
                 mf.setProbeJson(info.toString());
@@ -109,6 +113,18 @@ public class UploadService {
             n.put("audioSampleRate", mi.audioSampleRate());
         }
         return n;
+    }
+
+    static String sha256(java.nio.file.Path p) {
+        try (var in = java.nio.file.Files.newInputStream(p)) {
+            var md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] buf = new byte[65536];
+            int n;
+            while ((n = in.read(buf)) > 0) md.update(buf, 0, n);
+            return java.util.HexFormat.of().formatHex(md.digest());
+        } catch (Exception e) {
+            throw new ApiException(ErrorCode.INTERNAL_ERROR);
+        }
     }
 
     /** Best effort: FFprobe reads the common raster formats; formats it cannot read simply get no dimensions. */

@@ -25,7 +25,7 @@ public final class TestMedia {
 
     public static AppProperties props(Path dataDir) {
         return new AppProperties(dataDir.toString(), 24,
-                new AppProperties.Tools("ffmpeg", "ffprobe", "exiftool", "magick", "", "", "rembg-env", "", "u2net"),
+                new AppProperties.Tools("ffmpeg", "ffprobe", "exiftool", "magick", "", "", "rembg-env", "", "u2net", "", ""),
                 new AppProperties.Media(2, 50, 4, 0, 60, 1),
                 new AppProperties.Security("unit-test-secret", 72, true),
                 new AppProperties.Cors(List.of("http://localhost:5173")),

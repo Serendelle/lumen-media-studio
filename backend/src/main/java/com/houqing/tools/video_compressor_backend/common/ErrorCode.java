@@ -20,6 +20,12 @@ public enum ErrorCode {
     AUDIO_STREAM_MISSING(HttpStatus.UNPROCESSABLE_ENTITY, "该文件不含音频轨道"),
     /** An independent re-check of the output (probe / decode / stream layout) contradicted the request. */
     OUTPUT_INVALID(HttpStatus.UNPROCESSABLE_ENTITY, "输出文件未通过核验"),
+    UNSUPPORTED_DOCUMENT(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "不支持的文档格式"),
+    DOCUMENT_CORRUPTED(HttpStatus.UNPROCESSABLE_ENTITY, "文档已损坏或结构不合法"),
+    DOCUMENT_PASSWORD_REQUIRED(HttpStatus.UNPROCESSABLE_ENTITY, "文档受密码保护，暂不支持处理加密文档"),
+    DOCUMENT_CONVERSION_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "文档转换失败"),
+    DOCUMENT_CONVERSION_TIMEOUT(HttpStatus.UNPROCESSABLE_ENTITY, "文档转换超时"),
+    CONVERTER_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "文档转换引擎不可用"),
     INVALID_TASK_STATE(HttpStatus.CONFLICT, "当前任务状态不允许该操作"),
     TOO_MANY_TASKS(HttpStatus.TOO_MANY_REQUESTS, "进行中的任务过多，请稍后再试"),
     RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "请求过于频繁，请稍后再试"),

@@ -1,7 +1,7 @@
 // Types mirror docs/api-contract.md (backend is the source of truth).
 
 export type TaskStatus = 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED'
-export type MediaKind = 'VIDEO' | 'AUDIO' | 'IMAGE' | 'PDF' | 'ARCHIVE'
+export type MediaKind = 'VIDEO' | 'AUDIO' | 'IMAGE' | 'PDF' | 'ARCHIVE' | 'DOCUMENT'
 
 export type TaskType =
   | 'video.compress'
@@ -13,6 +13,7 @@ export type TaskType =
   | 'pdf.process'
   | 'metadata.scrub'
   | 'metadata.modify'
+  | 'document.convert'
 
 export interface UserView {
   id: number
@@ -187,4 +188,46 @@ export interface MediaCompare {
   deltaBytes: number
   savedPercent?: number
   durationDeltaMs?: number
+}
+
+export interface ConversionRoute {
+  from: string
+  to: string
+  engine: string
+  available: boolean
+  taskType: string
+}
+
+export interface ConversionMatrix {
+  routes: ConversionRoute[]
+  notSupported: string[]
+}
+
+/** GET /api/v2/documents/{id}/inspect — fields depend on the format. */
+export interface DocumentInspection {
+  fileId: string
+  filename: string
+  kind: MediaKind
+  format: 'docx' | 'xlsx' | 'html' | 'pdf'
+  sizeBytes: number
+  warnings: string[]
+  paragraphs?: number
+  tables?: { index: number; rows: number; cols: number }[]
+  pageSize?: string
+  pageWidthMm?: number
+  pageHeightMm?: number
+  pageCount?: number
+  fonts?: string[]
+  missingFonts?: string[]
+  sheets?: { index: number; name: string; hidden: boolean; usedRows: number; usedCols: number; mergedRegions: number; printArea?: string; landscape: boolean }[]
+  title?: string
+  willRemove?: Record<string, number>
+}
+
+export interface PdfPagePreview {
+  page: number
+  pageCount: number
+  pageSize: string
+  imageTicketUrl: string
+  expiresAt: number
 }

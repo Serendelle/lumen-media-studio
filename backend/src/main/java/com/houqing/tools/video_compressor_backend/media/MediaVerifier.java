@@ -63,7 +63,7 @@ public class MediaVerifier {
         private final ObjectNode measured;
         private String failureCode;
 
-        Verification(ObjectMapper mapper) {
+        public Verification(ObjectMapper mapper) {
             this.mapper = mapper;
             this.checks = mapper.createArrayNode();
             this.measured = mapper.createObjectNode();

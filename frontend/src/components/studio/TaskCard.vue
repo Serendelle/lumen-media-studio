@@ -36,6 +36,7 @@ const facts = computed(() => {
       ? { k: '核验', v: `${v.checks.length} 项全部通过`, tone: 'ok' }
       : { k: '核验', v: `${bad} 项未通过`, tone: 'warn' })
   }
+  if (Array.isArray(res.warnings) && res.warnings.length) out.push({ k: '提示', v: `${res.warnings.length} 条（查看结果）`, tone: 'warn' })
   if (res.retry) out.push({ k: '自动调整', v: `码率 ${res.retry.fromKbps} → ${res.retry.toKbps} kbps` })
   if (res.codec) out.push({ k: '编码', v: String(res.codec).toUpperCase() })
   if (res.count) out.push({ k: '数量', v: `${res.count} 个文件` })

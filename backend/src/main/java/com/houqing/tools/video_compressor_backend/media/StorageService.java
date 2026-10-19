@@ -160,6 +160,7 @@ public class StorageService {
         List<MediaFile> expired = repo.findByExpiresAtLessThan(now);
         for (MediaFile mf : expired) {
             quietDelete(storageRoot.resolve(mf.getStoredName()));
+            deleteWorkDir("doc-preview-" + mf.getId());
             repo.delete(mf);
         }
         if (!expired.isEmpty()) log.info("purged {} expired files", expired.size());
@@ -168,6 +169,7 @@ public class StorageService {
 
     public void deleteFile(MediaFile mf) {
         quietDelete(storageRoot.resolve(mf.getStoredName()));
+        deleteWorkDir("doc-preview-" + mf.getId()); // rendered page previews of a PDF
         repo.delete(mf);
     }
 

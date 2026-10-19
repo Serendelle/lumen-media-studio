@@ -3,7 +3,7 @@
   检查 Lumen 流明智媒在本机运行所需的全部依赖（只读，不修改任何系统设置）。
 .DESCRIPTION
   必需：JDK 17+、Node.js 18+、FFmpeg/FFprobe、ExifTool
-  可选：ImageMagick（图片/PDF）、Ghostscript（PDF）、rembg（AI 抠图）、DeepSeek Key（智能模式）
+  可选：ImageMagick（图片/PDF）、Ghostscript（PDF）、LibreOffice（Word/Excel 转 PDF）、Chrome/Edge（HTML 转 PDF）、rembg（AI 抠图）、DeepSeek Key（智能模式）
   退出码：0 = 必需项齐全；1 = 缺少必需项。
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File scripts\check-environment.ps1
@@ -107,6 +107,14 @@ if (-not $gs) {
 }
 if ($gs) { Write-Row 'Ghostscript' '可用' $gs 'ok' }
 else { Write-Row 'Ghostscript' '未安装（可选）' 'PDF 功能不可用；从 ghostscript.com 或 GitHub ArtifexSoftware/ghostpdl-downloads 安装' 'warn'; $script:Warn++ }
+
+$soffice = Find-Exe 'soffice.com' @('C:\Program Files\LibreOffice\program\soffice.com', 'D:\LibreOffice\program\soffice.com', 'D:\Program Files\LibreOffice\program\soffice.com')
+if ($soffice) { Write-Row 'LibreOffice' '可用' $soffice 'ok' }
+else { Write-Row 'LibreOffice' '未安装（可选）' 'Word/Excel 转 PDF 不可用；安装：winget install TheDocumentFoundation.LibreOffice（可加 --location D:\LibreOffice）' 'warn'; $script:Warn++ }
+
+$browser = @('C:\Program Files\Google\Chrome\Application\chrome.exe', "$LocalAppData\Google\Chrome\Application\chrome.exe", 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe') | Where-Object { Test-Path $_ } | Select-Object -First 1
+if ($browser) { Write-Row 'Chrome / Edge' '可用' $browser 'ok' }
+else { Write-Row 'Chrome / Edge' '未找到（可选）' 'HTML 转 PDF 不可用' 'warn'; $script:Warn++ }
 
 $rembg = $null
 foreach ($base in @("$env:USERPROFILE\miniconda3", "$env:USERPROFILE\anaconda3", "$LocalAppData\miniconda3", 'C:\ProgramData\miniconda3')) {
