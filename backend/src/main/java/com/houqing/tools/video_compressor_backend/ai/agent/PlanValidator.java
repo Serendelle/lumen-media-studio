@@ -20,7 +20,17 @@ import java.util.*;
 public class PlanValidator {
     static final int MAX_STEPS = 8;
     static final Set<String> TOOLS = Set.of("video.compress", "video.convert", "video.watermark", "audio.extract",
-            "image.process", "image.removebg", "pdf.process", "metadata.scrub", "metadata.modify");
+            "image.process", "image.removebg", "pdf.process", "metadata.scrub", "metadata.modify", "document.convert");
+    /**
+     * Operations an agent must never put in a plan, whatever it was told: they act on a whole project or delete
+     * data, so only the user's own click on the page may trigger them.
+     */
+    static final Map<String, String> FORBIDDEN = Map.of(
+            "spec.deliver", "生成交付包只能由你在「材料规范官」页面确认后执行",
+            "spec.delete", "删除项目只能由你在页面上二次确认后执行",
+            "file.delete", "删除文件只能由你在「我的文件」中确认后执行",
+            "flow.publish", "发布操作只能由你在页面上确认后执行",
+            "flow.delete", "删除操作只能由你在页面上二次确认后执行");
 
     private final TaskEngine engine;
     private final StorageService storage;
@@ -61,6 +71,10 @@ public class PlanValidator {
             }
             expectedId++;
             String tool = s.path("tool").asText("");
+            if (FORBIDDEN.containsKey(tool)) {
+                errors.add(label + "：" + FORBIDDEN.get(tool) + "，不能放进 AI 计划");
+                continue;
+            }
             if (!TOOLS.contains(tool)) {
                 errors.add(label + "：不支持的 tool「" + clip(tool, 40) + "」");
                 continue;
@@ -150,6 +164,7 @@ public class PlanValidator {
             case "image.removebg" -> new String[]{"IMAGE", "png"};
             case "image.process" -> inputs.size() > 1 ? new String[]{"ARCHIVE", "zip"}
                     : new String[]{"IMAGE", com.houqing.tools.video_compressor_backend.media.handler.ImageProcessHandlerAccess.outputExt(p, first)};
+            case "document.convert" -> new String[]{"PDF", "pdf"};
             case "pdf.process" -> "images-to-pdf".equals(p.path("tool").asText()) ? new String[]{"PDF", "pdf"} : new String[]{"ARCHIVE", "zip"};
             default -> new String[]{first.getMediaType(), StorageService.extensionOf(first.getStoredName())};
         };

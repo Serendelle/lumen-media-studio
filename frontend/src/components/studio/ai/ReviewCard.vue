@@ -33,13 +33,14 @@ async function dl(fileId: string, name?: string) {
     <header class="head">
       <span class="eyebrow">Agent 04 · 质量审核官</span>
       <h3>{{ review.allPassed ? '全部核验通过' : '部分结果未达到要求' }}</h3>
-      <p class="sub">输出文件已由服务端重新读取并逐项核验<template v-if="review.retries"> · 自动重试 {{ review.retries }} 次</template></p>
+      <p class="sub">输出文件已由服务端重新读取并逐项核验<template v-if="review.retries"> · 自动重试 {{ review.retries }} 次</template>
+        <template v-if="review.verdict"> · 结论 <span class="mono">{{ review.verdict }}</span></template></p>
     </header>
 
     <ul class="checks">
       <li v-for="(c, i) in review.checks" :key="i" :class="{ bad: !c.ok, retry: c.afterRetry }">
         <span class="mark" aria-hidden="true"><Icon :name="c.ok ? 'check' : 'x'" :size="13" /></span>
-        <span class="what">步骤 {{ c.stepId }} · {{ c.name }}<em v-if="c.afterRetry">（重试后）</em></span>
+        <span class="what">{{ c.stepId ? `步骤 ${c.stepId} · ` : '' }}{{ c.name }}<em v-if="c.afterRetry">（重试后）</em></span>
         <span class="mono val">{{ c.actual }}</span>
         <span class="sr-only">{{ c.ok ? '通过' : '未通过' }}，期望 {{ c.expected }}</span>
       </li>

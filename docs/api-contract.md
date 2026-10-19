@@ -301,4 +301,12 @@ DeepSeek 只在后端调用，浏览器不会接触到 Key。未配置 Key 时�
 | `usage` | ✅ | `{model, llmCalls, promptTokens, completionTokens}` |
 | `error` | ✅ | `{code, message}` |
 
+### V2 扩展（prompt 1.5.0）
+
+- 新增只读工具 `inspect_document`（文档结构、字体、页面）和 `get_conversion_matrix`（本机真实可用的转换路线）；计划可以使用 `document.convert`。
+- 禁止进入 AI 计划的操作：`spec.deliver`（生成交付包）、`spec.delete`、`file.delete`、`flow.publish`、`flow.delete`。计划校验器会拒绝这些操作，并把原因反馈给规划官。
+- `submit_requirements.constraints`：用户的硬性要求 `{video{container, maxSizeMB, maxHeight, keepAudio}, audio{format}, image{format, maxSizeKB}, document{format}}`。服务端只保留已知且在范围内的字段，体积换算为整数字节（视频按 MiB、图片按 KiB）。约束会写入 `plan.constraints` 与 `plan.constraintsText`，在用户确认计划时展示。
+- 审核时，质量审核官会把每条约束对照**最终交付的文件**（没有被后续步骤继续处理的输出）逐条检查，检查项名称以 `约束·` 开头；某类约束没有对应的交付文件也算不通过。`review.verdict` 为 `VERIFIED` 当且仅当所有检查都通过，否则为 `FAILED`。
+- `document.convert` 的结果会检查 PDF 文件头、页数和首页渲染。
+
 计划步骤里的 `tool` 与 `/api/tasks` 的任务类型一一对应，`params` 与专业模式的参数相同（见第 4–8 节）；`inputs` 中的 `"step:N"` 表示使用第 N 步的输出文件。

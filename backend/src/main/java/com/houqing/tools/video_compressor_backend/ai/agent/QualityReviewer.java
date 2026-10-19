@@ -9,6 +9,7 @@ import com.houqing.tools.video_compressor_backend.media.*;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.BooleanSupplier;
 
@@ -78,6 +79,7 @@ public class QualityReviewer {
             }
         }
         privacyCoverage(ownerId, plan, finalResults, checks);
+        constraintCoverage(ownerId, plan, finalResults, checks);
         boolean allPassed = true;
         for (JsonNode c : checks) {
             if (!c.path("ok").asBoolean() && !superseded(checks, c)) allPassed = false;
@@ -117,6 +119,83 @@ public class QualityReviewer {
             } finally {
                 storage.deleteWorkDir(dirId);
             }
+        }
+    }
+
+    /**
+     * The user's structured constraints (see {@link Constraints}) are checked against what the user actually gets:
+     * the outputs of steps no later step consumed. A constraint with no matching deliverable fails too.
+     */
+    private void constraintCoverage(long ownerId, JsonNode plan, Map<Integer, MediaExecutor.StepResult> results, ArrayNode checks) {
+        JsonNode c = plan.path("constraints");
+        if (!c.isObject() || c.isEmpty()) return;
+        Set<Integer> consumed = new HashSet<>();
+        for (JsonNode s : plan.path("steps")) {
+            for (JsonNode in : s.path("inputs")) {
+                if (in.asText().startsWith("step:")) consumed.add(Integer.parseInt(in.asText().substring(5)));
+            }
+        }
+        List<MediaFile> videos = new ArrayList<>(), audios = new ArrayList<>(), images = new ArrayList<>(), pdfs = new ArrayList<>();
+        Map<String, Integer> stepOf = new HashMap<>();
+        for (MediaExecutor.StepResult r : results.values()) {
+            if (!"SUCCEEDED".equals(r.status()) || consumed.contains(r.stepId()) || r.outputFileId() == null) continue;
+            storage.find(ownerId, r.outputFileId()).ifPresent(f -> {
+                stepOf.put(f.getId(), r.stepId());
+                String ext = StorageService.extensionOf(f.getStoredName());
+                switch (f.kind()) {
+                    case VIDEO -> videos.add(f);
+                    case AUDIO -> audios.add(f);
+                    case PDF -> pdfs.add(f);
+                    case IMAGE -> (ext.equals("gif") ? videos : images).add(f);
+                    default -> { }
+                }
+            });
+        }
+        JsonNode v = c.path("video");
+        if (v.isObject()) {
+            if (videos.isEmpty()) add(checks, 0, "约束·视频", false, "交付一个视频", "没有视频交付物");
+            for (MediaFile f : videos) {
+                int step = stepOf.get(f.getId());
+                String ext = StorageService.extensionOf(f.getStoredName());
+                if (v.has("container")) add(checks, step, "约束·视频格式", ext.equals(v.path("container").asText()),
+                        v.path("container").asText().toUpperCase(), ext.toUpperCase());
+                if (v.has("maxBytes")) add(checks, step, "约束·视频体积", f.getSizeBytes() <= v.path("maxBytes").asLong(),
+                        "≤ " + v.path("maxBytes").asLong() + " 字节", f.getSizeBytes() + " 字节");
+                if (v.has("maxHeight") || v.has("keepAudio")) {
+                    try {
+                        MediaProbe.MediaInfo mi = probe.probe(storage.pathOf(f));
+                        if (v.has("maxHeight")) add(checks, step, "约束·分辨率", mi.height() <= v.path("maxHeight").asInt(),
+                                "高度 ≤ " + v.path("maxHeight").asInt(), mi.width() + "×" + mi.height());
+                        if (v.has("keepAudio")) add(checks, step, "约束·音轨", mi.hasAudio() == v.path("keepAudio").asBoolean(),
+                                v.path("keepAudio").asBoolean() ? "保留" : "去除", mi.hasAudio() ? "有音轨" : "无音轨");
+                    } catch (ApiException e) {
+                        add(checks, step, "约束·视频可读", false, "可解析", "无法解析");
+                    }
+                }
+            }
+        }
+        JsonNode a = c.path("audio");
+        if (a.isObject()) {
+            if (audios.isEmpty()) add(checks, 0, "约束·音频", false, "交付一个音频", "没有音频交付物");
+            for (MediaFile f : audios) {
+                String ext = StorageService.extensionOf(f.getStoredName());
+                add(checks, stepOf.get(f.getId()), "约束·音频格式", ext.equals(a.path("format").asText()), a.path("format").asText().toUpperCase(), ext.toUpperCase());
+            }
+        }
+        JsonNode im = c.path("image");
+        if (im.isObject()) {
+            if (images.isEmpty()) add(checks, 0, "约束·图片", false, "交付图片", "没有图片交付物");
+            for (MediaFile f : images) {
+                int step = stepOf.get(f.getId());
+                String ext = StorageService.extensionOf(f.getStoredName());
+                if (im.has("format")) add(checks, step, "约束·图片格式", ext.equals(im.path("format").asText()), im.path("format").asText().toUpperCase(), ext.toUpperCase());
+                if (im.has("maxBytes")) add(checks, step, "约束·图片体积", f.getSizeBytes() <= im.path("maxBytes").asLong(),
+                        "≤ " + im.path("maxBytes").asLong() + " 字节", f.getSizeBytes() + " 字节");
+            }
+        }
+        if (c.path("document").isObject() && pdfs.isEmpty()) add(checks, 0, "约束·PDF", false, "交付 PDF", "没有 PDF 交付物");
+        for (MediaFile f : c.path("document").isObject() ? pdfs : List.<MediaFile>of()) {
+            add(checks, stepOf.get(f.getId()), "约束·PDF", com.houqing.tools.video_compressor_backend.document.PdfFacts.hasPdfMagic(storage.pathOf(f)), "PDF", "PDF");
         }
     }
 
@@ -165,6 +244,21 @@ public class QualityReviewer {
                 if (source != null) addAll(checks, r.stepId(),
                         verifier.verifyConvert(storage.pathOf(f), p.path("targetFormat").asText(), source, null), oks);
                 else oks.add(add(checks, r.stepId(), "源文件", false, "可读取", "源文件已不可用，无法对照"));
+            }
+            case "document.convert" -> {
+                Path pdf = storage.pathOf(f);
+                boolean magic = com.houqing.tools.video_compressor_backend.document.PdfFacts.hasPdfMagic(pdf);
+                oks.add(add(checks, r.stepId(), "PDF 文件头", magic, "%PDF-", magic ? "%PDF-" : "不是 PDF"));
+                if (magic) {
+                    try {
+                        var info = com.houqing.tools.video_compressor_backend.document.PdfFacts.read(pdf);
+                        oks.add(add(checks, r.stepId(), "页数", info.pageCount() >= 1, "≥ 1", String.valueOf(info.pageCount())));
+                        com.houqing.tools.video_compressor_backend.document.PdfFacts.renderHasInk(pdf, 1);
+                        oks.add(add(checks, r.stepId(), "首页可渲染", true, "可渲染", "正常（" + info.pageSizeLabel() + "）"));
+                    } catch (ApiException e) {
+                        oks.add(add(checks, r.stepId(), "可解析", false, "PDF 可打开并渲染", e.getMessage()));
+                    }
+                }
             }
             case "metadata.scrub" -> {
                 String dirId = "review-" + UUID.randomUUID();

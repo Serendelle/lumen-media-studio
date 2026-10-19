@@ -1,9 +1,9 @@
 ---
 id: media-executor
 title: 处理执行官
-version: 1.0.0
+version: 1.1.0
 agent: 03
-tools: (engine) video.compress, video.convert, video.watermark, audio.extract, image.process, image.removebg, pdf.process, metadata.scrub, metadata.modify
+tools: (engine) video.compress, video.convert, video.watermark, audio.extract, image.process, image.removebg, pdf.process, metadata.scrub, metadata.modify, document.convert
 terminal_tool: none
 max_rounds: 0
 mode: deterministic

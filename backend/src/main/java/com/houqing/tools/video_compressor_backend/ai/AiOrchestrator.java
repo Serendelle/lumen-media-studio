@@ -223,6 +223,8 @@ public class AiOrchestrator {
             events.emit(id, "agent", agent("requirement-analyst", "working", "正在理解你的需求，并读取文件的真实信息"));
             JsonNode req = runAgent("requirement-analyst", ownerId, id, attached, history(id), null, run, null);
             if (run.cancelled) return;
+            // the model's constraint proposal is untrusted: keep only known, bounded fields
+            if (req instanceof ObjectNode ro) ro.set("constraints", com.houqing.tools.video_compressor_backend.ai.agent.Constraints.normalize(req.path("constraints"), mapper));
             ObjectNode ctx = context(c);
             ctx.set("requirements", req);
             c.setContextJson(ctx.toString());
@@ -262,6 +264,11 @@ public class AiOrchestrator {
             int version = c.getPlanVersion() + 1;
             ObjectNode plan = outcome.plan();
             plan.put("version", version);
+            JsonNode constraints = req.path("constraints");
+            if (constraints.isObject() && !constraints.isEmpty()) {
+                plan.set("constraints", constraints);
+                plan.put("constraintsText", com.houqing.tools.video_compressor_backend.ai.agent.Constraints.describe(constraints));
+            }
             c.setPlanVersion(version);
             c.setPlanJson(plan.toString());
             conversations.save(c);
@@ -322,6 +329,8 @@ public class AiOrchestrator {
             rv.set("checks", review.checks());
             rv.put("retries", review.retries());
             rv.put("allPassed", review.allPassed());
+            // one verdict for the whole run: VERIFIED only when every check — including the user's constraints — held
+            rv.put("verdict", review.allPassed() ? "VERIFIED" : "FAILED");
             rv.set("outputs", outputs);
             c = reload(id);
             ObjectNode ctx = context(c);

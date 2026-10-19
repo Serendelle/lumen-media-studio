@@ -30,6 +30,8 @@ export interface Plan {
   summary: string
   steps: PlanStep[]
   warnings: string[]
+  /** the user's hard requirements on the final files, as the reviewer will check them */
+  constraintsText?: string
 }
 
 export interface ReviewCheck {
@@ -56,6 +58,8 @@ export interface Review {
   checks: ReviewCheck[]
   retries: number
   allPassed: boolean
+  /** VERIFIED only when every check, including the user's constraints, held */
+  verdict?: 'VERIFIED' | 'FAILED'
   outputs: ReviewOutput[]
 }
 

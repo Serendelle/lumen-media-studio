@@ -74,6 +74,9 @@ async function decide(approve: boolean) {
         </div>
       </li>
     </ol>
+    <p v-if="plan.constraintsText" class="cons">
+      <strong>你的硬性要求</strong>{{ plan.constraintsText }}<span class="hint">完成后会逐条核验最终交给你的文件</span>
+    </p>
     <ul v-if="plan.warnings?.length" class="warnings">
       <li v-for="w in plan.warnings" :key="w">{{ w }}</li>
     </ul>
@@ -172,6 +175,21 @@ async function decide(approve: boolean) {
 }
 .params dd {
   margin: 0;
+}
+.cons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--fog);
+  color: var(--fog-ink);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
+.cons .hint {
+  opacity: 0.8;
 }
 .warnings {
   margin: 0;

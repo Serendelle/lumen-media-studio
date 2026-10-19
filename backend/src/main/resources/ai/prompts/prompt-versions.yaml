@@ -1,7 +1,16 @@
 # Prompt version registry. The active version is recorded on every conversation (ai_conversations.prompt_version)
 # so a result can always be traced back to the exact prompts that produced it.
-active: 1.4.0
+active: 1.5.0
 versions:
+  - version: 1.5.0
+    date: 2026-10-19
+    system: system.yaml@1.5.0
+    skills:
+      requirement-analyst: 1.3.0
+      task-planner: 1.3.0
+      media-executor: 1.1.0
+      quality-reviewer: 1.1.0
+    notes: V2：新增只读工具 inspect_document / get_conversion_matrix 与任务类型 document.convert；需求中加入结构化 constraints，由审核官对最终交付文件逐条核验；交付包生成与删除类操作禁止进入 AI 计划。
   - version: 1.4.0
     date: 2026-10-12
     system: system.yaml@1.4.0

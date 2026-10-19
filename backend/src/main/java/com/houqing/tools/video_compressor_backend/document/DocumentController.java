@@ -2,7 +2,6 @@ package com.houqing.tools.video_compressor_backend.document;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.houqing.tools.video_compressor_backend.auth.CurrentUser;
 import com.houqing.tools.video_compressor_backend.auth.DownloadTicketService;
@@ -34,16 +33,16 @@ public class DocumentController {
     private final StorageService storage;
     private final DocumentInspectionService inspection;
     private final DownloadTicketService tickets;
-    private final ToolLocator tools;
+    private final ConversionMatrixService matrix;
     private final ObjectMapper mapper;
 
     public DocumentController(TaskEngine engine, StorageService storage, DocumentInspectionService inspection,
-                              DownloadTicketService tickets, ToolLocator tools, ObjectMapper mapper) {
+                              DownloadTicketService tickets, ConversionMatrixService matrix, ObjectMapper mapper) {
         this.engine = engine;
         this.storage = storage;
         this.inspection = inspection;
         this.tickets = tickets;
-        this.tools = tools;
+        this.matrix = matrix;
         this.mapper = mapper;
     }
 
@@ -63,28 +62,7 @@ public class DocumentController {
     /** The routes this installation can really run right now (the UI offers nothing else). */
     @GetMapping("/matrix")
     public ObjectNode matrix() {
-        boolean office = tools.available(Tool.SOFFICE);
-        boolean browser = tools.available(Tool.CHROMIUM);
-        boolean pdfTools = tools.available(Tool.MAGICK) && tools.available(Tool.GHOSTSCRIPT);
-        ObjectNode n = mapper.createObjectNode();
-        ArrayNode routes = n.putArray("routes");
-        route(routes, "docx", "pdf", "LibreOffice", office, "document.convert");
-        route(routes, "xlsx", "pdf", "LibreOffice", office, "document.convert");
-        route(routes, "html", "pdf", "Chromium（无脚本、无网络）", browser, "document.convert");
-        route(routes, "image", "pdf", "ImageMagick", pdfTools, "pdf.process");
-        route(routes, "pdf", "png/jpg", "Ghostscript", pdfTools, "pdf.process");
-        ArrayNode no = n.putArray("notSupported");
-        for (String s : List.of("pdf → docx / xlsx（暂不提供）", "xlsx → docx、docx → xlsx、html → xlsx", "旧版 .doc / .xls、扫描件 OCR")) no.add(s);
-        return n;
-    }
-
-    private static void route(ArrayNode a, String from, String to, String engine, boolean available, String taskType) {
-        ObjectNode r = a.addObject();
-        r.put("from", from);
-        r.put("to", to);
-        r.put("engine", engine);
-        r.put("available", available);
-        r.put("taskType", taskType);
+        return matrix.matrix();
     }
 
     @GetMapping("/{fileId}/inspect")
