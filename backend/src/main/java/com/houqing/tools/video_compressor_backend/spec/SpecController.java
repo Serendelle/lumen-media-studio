@@ -30,9 +30,10 @@ public class SpecController {
     private final TaskRepository tasks;
     private final StorageService storage;
     private final ObjectMapper mapper;
+    private final SpecFormService forms;
 
     public SpecController(SpecService specs, SpecExtractor extractor, SpecItemRepository items, TaskEngine engine,
-                          TaskRepository tasks, StorageService storage, ObjectMapper mapper) {
+                          TaskRepository tasks, StorageService storage, ObjectMapper mapper, SpecFormService forms) {
         this.specs = specs;
         this.extractor = extractor;
         this.items = items;
@@ -40,6 +41,7 @@ public class SpecController {
         this.tasks = tasks;
         this.storage = storage;
         this.mapper = mapper;
+        this.forms = forms;
     }
 
     public record CreateRequest(String name) {}
@@ -64,6 +66,7 @@ public class SpecController {
             JsonNode r = specs.roster(p);
             n.put("people", r == null ? 0 : r.path("people").size());
             n.put("files", items.countByProjectId(p.getId()));
+            n.put("records", forms.recordCount(p.getId()));
             n.put("updatedAt", p.getUpdatedAt());
         }
         out.put("page", pg.getNumber());

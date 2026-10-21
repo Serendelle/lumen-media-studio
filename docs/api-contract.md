@@ -243,7 +243,7 @@ V2 新业务接口统一放在 `/api/v2` 下，原有 V1 路径保持不变。
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | POST | `/` | `{name}` → 201 项目 |
-| GET | `/` | `{items[{id, name, slots, people, files, updatedAt}], total}` |
+| GET | `/` | `{items[{id, name, slots, people, files, records, updatedAt}], total}`；records 为有效收集表记录数 |
 | GET / DELETE | `/{id}` | 项目详情（`spec`、`roster`、`templates`、`ai`、`namingUnknown?`）；删除项目时文件保留在"我的文件"中，保留期恢复为默认 24 小时 |
 | POST | `/{id}/extract` | `{noticeText}` → AI 草稿 `{spec, errors[], warnings[], model, promptVersion, rounds}`，**不保存**。只把通知原文发给模型；出现校验错误时自动修正 1 次 |
 | PUT | `/{id}/spec` | `{spec, version, noticeText?}`：校验后保存，`version` 不一致返回 409 `VERSION_CONFLICT`；保存后已放入的材料按新规范重新检查 |
@@ -264,7 +264,32 @@ V2 新业务接口统一放在 `/api/v2` 下，原有 V1 路径保持不变。
 
 **匹配**（确定性规则，不调用模型）：优先按学号/编号（≥ 4 位）匹配；其次按姓名，多个姓名同时命中时取最长的那个，且必须唯一；名单中有重名，或匹配不唯一时，留给用户手动指定。材料项按文件类型匹配，同类型有多个材料项时再按名称区分。
 
-**分享收集**（匿名）：`GET /api/public/collections/{token}` 仅返回项目名称、公开材料要求、到期时间和单文件上限；`POST /api/public/collections/{token}/submissions` 为 multipart：`file`、`name`、`identifier?`、`slotKey`、`requestKey`（16-80 位字母/数字/下划线/短横线）。成功仅返回 `{receipt, filename, submittedAt}`，不返回内部文件 ID、匹配结果或名单。同链接同 `requestKey` 重试返回原回执，不重复保存文件；没有公开的提交列表或下载接口。无效、停用、到期令牌统一 404。单文件 200MiB；链接累计 500 文件 / 2GiB，额度耗尽或 IP 每分钟超过 60 次返回 429。负责人看板项目含 `submittedBy`、`submittedAt`；`matchMethod` 新增 `SUBMISSION` 和 `AI`。
+**分享收集**（匿名）：`GET /api/public/collections/{token}` 返回项目名称、公开材料要求、到期时间、单文件上限；设置表格字段后额外返回 `form` 配置及 `formKey`（个人凭证的存储命名空间）。无表格字段时，`POST /api/public/collections/{token}/submissions` 为原有文件收集 multipart：`file`、`name`、`identifier?`、`slotKey`、`requestKey`（16-80 位字母/数字/下划线/短横线）。有表格字段时须先创建记录，再使用下述行级附件接口。提交成功仅返回 `{receipt, filename, submittedAt}`，不返回内部文件 ID、匹配结果或完整名单。同链接同 `requestKey` 重试返回原回执，且表格附件会核对原记录，不能跨记录复用回执。无效、停用、到期令牌统一 404。单文件 200MiB；链接累计 500 文件 / 2GiB，额度耗尽或匿名操作过频返回 429。负责人材料看板含 `submittedBy`、`submittedAt`；`matchMethod` 包含 `SUBMISSION` 和 `AI`。
+
+### 在线协作收集表
+
+负责人前缀为 `/api/v2/specs/{id}/form`，分享前缀为 `/api/public/collections/{token}/form`。两者共用数据和业务规则，负责人路由必须为项目所有者；分享路由始终先验证当前链接，再校验 JWT / `X-Participant-Token` 和行级权限。所有响应禁止缓存。
+
+| 方法 | 相对路径 | 说明 |
+|---|---|---|
+| GET / PUT | `/` | GET 返回配置及 version；PUT `{config,version}` 仅负责人设置字段与权限，版本冲突 409 |
+| POST | `/participants` | `{name,secret}`：登记或恢复身份；secret 为 43 位 base64url 随机凭证。登录账号以 JWT 为准，可绑定本人持有的匿名凭证；绑定后必须登录 |
+| GET / PUT | `/members` | 仅负责人列出 / 设置成员；PUT `{username,role:EDITOR|VIEWER|null}`，null 为撤销 |
+| GET | `/rows?page=0&size=50&deleted=false` | 返回 `{config,actor,permissions,rows,total,page,size}`；size 最大 100，回收站仅负责人可读 |
+| POST | `/rows` | `{values,requestKey,configVersion}`：同身份同 requestKey 幂等，默认每人一条，可设置多条 |
+| PATCH | `/rows/{rowId}` | `{values,version,configVersion}`：values 为字段补丁；记录或表格版本不符 409，禁止静默覆盖 |
+| DELETE | `/rows/{rowId}?version=N` | 仅本人且具备编辑权，或负责人，可移入回收站；协作编辑者不能删除别人的记录 |
+| POST | `/rows/{rowId}/restore?version=N` | 仅负责人恢复，保留数据和附件 |
+| GET | `/statistics` | 仅统计当前可见记录：人数、记录数、附件数、各字段完整度、不同/重复值、前 100 分组；数字附精确十进制 sum/average/min/max |
+| GET | `/export` | 下载当前可见记录的 XLSX；全部单元格显式文本，保留小数精度且不执行公式 |
+| GET | `/rows/{rowId}/discussion` | 当前可见记录的留言（最多 200 条）与最近 50 条修改记录 |
+| POST | `/rows/{rowId}/comments` | `{content}`，最多 1000 字；查看范围与记录一致，关闭留言或停止收集后拒绝普通成员写入 |
+| POST | `/rows/{rowId}/files` | multipart `file,slotKey,requestKey`；按行级附件权限校验，再进入类型检测与材料检查流程 |
+| GET | `/rows/{rowId}/files/{itemId}` | 动态校验当前行可见权限后返回附件；不向客户端暴露原库 fileId 或下载票据 |
+
+配置为 `{viewMode:OWN|ALL, editMode:OWN|ALL|DESIGNATED|LOCKED, accepting, allowMultiple, allowComments, fields:[{key,label,type,required,options?}]}`；支持 TEXT/LONG_TEXT/NUMBER/SELECT/DATE/CHECKBOX，最多 20 字段。所有人编辑须允许全表查看。指定 EDITOR/VIEWER 可看全表，VIEWER 不可写；LOCKED 模式下指定 EDITOR 也不能修改。accepting=false 后普通参与者与指定成员均不能修改，负责人仍可管理。成员移除或模式变更后，下次请求重新判断权限，统计、导出、附件和留言不例外。
+
+已存在记录的字段不可删除或改类型；新增必填字段不删除旧记录，但后续修改须补全。每项目累计最多 2000 条记录（含回收站）、5000 位登记参与者；行值 JSON 最大 16000 字符。文本有长度限制，数字最多 12 位整数、6 位小数和 15 位有效数字。匿名凭证只存摘要，不能凭姓名查询他人记录；收集表字段值不会发送给 AI。
 
 **AI 整理**：仅发送文件名/路径、提交姓名、名单姓名及材料名称/类型；不发送文件内容和名单其他列。模型仅能提出已有项目中的 item/person/slot key，所有结果先整体校验，低于 0.9 置信度的建议不应用，材料类型不兼容或存在未知 key 时整次拒绝并保持原状态。模型请求期间不持有数据库写锁；应用前核对规范、名单及材料快照，防止覆盖并发修改。
 

@@ -4,8 +4,9 @@ import { specsApi } from '@/api/endpoints'
 import type { CollectionLink, SpecProject } from '@/api/types'
 import { useToast } from '@/composables/useToast'
 import { bytes } from '@/utils/format'
+import type { FormConfig } from '@/api/forms'
 
-const props = defineProps<{ project: SpecProject }>()
+const props = defineProps<{ project: SpecProject; formConfig?: FormConfig | null }>()
 const toast = useToast()
 const links = ref<CollectionLink[]>([])
 const days = ref(7)
@@ -43,13 +44,14 @@ async function copy() {
 <template>
   <section class="card collection">
     <div class="intro"><span class="eyebrow">一起收集，集中整理</span><h2>把收材料这件事，交给一个链接</h2>
-      <p>参与者免登录填写姓名、编号并上传，彼此看不到资料。你可以在「材料」中查看全部提交、核对进度，再用 AI 一键整理。</p></div>
+      <p v-if="formConfig?.fields.length">参与者通过链接填写信息并补交附件，查看和编辑范围按上方设置执行。你可以在「协作表格」中统计、导出和管理记录，再到材料页检查附件、用 AI 整理分类。</p>
+      <p v-else>参与者免登录填写姓名、编号并上传，彼此看不到资料。你可以在「材料」中查看全部提交、核对进度，再用 AI 一键整理。</p></div>
     <div class="settings">
       <label for="collection-days">收集有效期</label>
       <select id="collection-days" v-model.number="days" class="select"><option :value="1">1 天</option><option :value="7">7 天</option><option :value="14">14 天</option><option :value="30">30 天</option></select>
-      <button class="btn" :disabled="busy || !project.spec.slots.length" @click="create">{{ busy ? '处理中…' : links.length ? '重新生成链接' : '生成收集链接' }}</button>
+      <button class="btn" :disabled="busy || (!project.spec.slots.length && !formConfig?.fields.length)" @click="create">{{ busy ? '处理中…' : links.length ? '重新生成链接' : '生成收集链接' }}</button>
     </div>
-    <p v-if="!project.spec.slots.length" class="note">先在「规范」中保存需要收集的材料项。</p>
+    <p v-if="!project.spec.slots.length" class="note">仅收集表格信息时可直接分享；如果需要附件，请先在「规范」中保存材料项。</p>
     <p class="note">没有现成名单也可以开始，提交姓名将自动登记。导入名单后，重名或无法核实身份的提交会留待你确认。</p>
     <div v-if="url" class="share"><label for="collection-url">收集链接</label><div class="url-row"><input id="collection-url" class="input" :value="url" readonly @focus="($event.target as HTMLInputElement).select()" /><button class="btn" @click="copy">复制链接</button><a class="btn btn--ghost" :href="url" target="_blank" rel="noreferrer">预览</a></div></div>
     <p v-else-if="links.some(l => l.active)" class="note">已有收集链接正在使用。链接仅在生成时显示，请使用已保存的链接；重新生成后旧链接立即失效。</p>

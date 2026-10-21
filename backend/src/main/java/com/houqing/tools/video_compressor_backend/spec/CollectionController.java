@@ -40,10 +40,13 @@ public class CollectionController {
     @PostMapping(value = "/api/public/collections/{token}/submissions", consumes = "multipart/form-data")
     public ResponseEntity<ObjectNode> submit(@PathVariable String token, @RequestParam String name,
             @RequestParam(defaultValue = "") String identifier, @RequestParam String slotKey,
-            @RequestParam String requestKey, @RequestParam MultipartFile file, HttpServletRequest request) {
+            @RequestParam String requestKey, @RequestParam MultipartFile file,
+            @RequestParam(required = false) String rowId,
+            @RequestHeader(value = "X-Participant-Token", required = false) String secret, HttpServletRequest request) {
         limit(request.getRemoteAddr()); // ignore caller-controlled forwarding headers
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-                .body(collections.submit(token, name, identifier, slotKey, requestKey, file));
+                .body(collections.submit(token, name, identifier, slotKey, requestKey, file, rowId,
+                        SpecFormService.Access.shared(token, CurrentUser.optionalId().orElse(null), secret)));
     }
 
     private synchronized void limit(String ip) {

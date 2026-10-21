@@ -6,6 +6,9 @@ import RosterPanel from '@/components/spec/RosterPanel.vue'
 import IntakeBoard from '@/components/spec/IntakeBoard.vue'
 import DeliveryPanel from '@/components/spec/DeliveryPanel.vue'
 import CollectionPanel from '@/components/spec/CollectionPanel.vue'
+import FormSettingsPanel from '@/components/spec/FormSettingsPanel.vue'
+import FormBoard from '@/components/spec/FormBoard.vue'
+import type { FormConfig } from '@/api/forms'
 import { specsApi } from '@/api/endpoints'
 import type { SpecBoard, SpecProject } from '@/api/types'
 import { useToast } from '@/composables/useToast'
@@ -17,23 +20,26 @@ const id = computed(() => String(route.params.id))
 const project = ref<SpecProject | null>(null)
 const error = ref<string | null>(null)
 const summary = ref<SpecBoard['summary'] | null>(null)
+const formConfig = ref<FormConfig | null>(null)
 
 const STEPS = [
-  { k: 'spec', l: '① 规范' },
-  { k: 'roster', l: '② 名单' },
-  { k: 'collect', l: '③ 分享收集' },
-  { k: 'intake', l: '④ 材料与 AI 整理' },
-  { k: 'deliver', l: '⑤ 交付' },
+  { k: 'collect', l: '① 收集与权限' },
+  { k: 'table', l: '② 协作表格' },
+  { k: 'spec', l: '③ 材料规范' },
+  { k: 'roster', l: '④ 名单（可选）' },
+  { k: 'intake', l: '⑤ 材料与 AI 整理' },
+  { k: 'deliver', l: '⑥ 交付' },
 ] as const
 type Step = (typeof STEPS)[number]['k']
 const step = computed<Step>({
-  get: () => (STEPS.some((s) => s.k === route.query.step) ? (route.query.step as Step) : 'spec'),
+  get: () => (STEPS.some((s) => s.k === route.query.step) ? (route.query.step as Step) : 'collect'),
   set: (s) => void router.replace({ query: { ...route.query, step: s } }),
 })
 const done = computed<Record<Step, boolean>>(() => ({
   spec: (project.value?.spec.slots.length ?? 0) > 0,
   roster: !!project.value?.roster,
   collect: false,
+  table: false,
   intake: (summary.value?.files ?? 0) > 0,
   deliver: false,
 }))
@@ -83,7 +89,8 @@ async function remove() {
 
       <SpecEditor v-if="step === 'spec'" :project="project" @saved="saved" />
       <RosterPanel v-else-if="step === 'roster'" :project="project" @saved="saved" />
-      <CollectionPanel v-else-if="step === 'collect'" :project="project" />
+      <div v-else-if="step === 'collect'" class="collect-panels"><FormSettingsPanel :project-id="project.id" @saved="c => formConfig = c" /><CollectionPanel :project="project" :form-config="formConfig" /></div>
+      <FormBoard v-else-if="step === 'table'" :target="{ projectId: project.id }" :slots="project.spec.slots" />
       <IntakeBoard v-else-if="step === 'intake'" :project="project" @changed="(b) => (summary = b.summary)" @saved="saved" />
       <DeliveryPanel v-else :project="project" :complete="summary?.complete ?? 0" :people="summary?.people ?? project.roster?.people.length ?? 0" @saved="saved" />
 
@@ -102,6 +109,7 @@ async function remove() {
 
 <style scoped>
 .desk { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); }
+.collect-panels { display:grid;gap:24px; }
 .head { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
 .back { font-size: var(--fs-sm); color: var(--text-3); text-decoration: none; }
 .head h1 { font-size: var(--fs-xl); }

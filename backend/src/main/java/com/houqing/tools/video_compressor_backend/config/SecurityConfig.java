@@ -49,6 +49,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/collections/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/public/collections/*/submissions").permitAll()
+                        // Every collaborative form operation validates its current link, participant and row permissions.
+                        .requestMatchers("/api/public/collections/*/form", "/api/public/collections/*/form/**").permitAll()
                         .requestMatchers("/api/system/**", "/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // downloads authorize with either a bearer token or a signed short-lived ticket (checked in controller)
@@ -83,7 +85,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(props.cors().allowedOrigins());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Idempotency-Key", "Last-Event-ID", "Accept"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Participant-Token", "Idempotency-Key", "Last-Event-ID", "Accept"));
         config.setExposedHeaders(List.of("Content-Disposition"));
         config.setAllowCredentials(false);
         config.setMaxAge(3600L);

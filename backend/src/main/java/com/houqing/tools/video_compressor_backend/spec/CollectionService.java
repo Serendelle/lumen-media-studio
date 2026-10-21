@@ -32,14 +32,16 @@ public class CollectionService {
     private final StorageService storage;
     private final ObjectMapper mapper;
     private final TransactionTemplate tx;
+    private final SpecFormService forms;
     private final SecureRandom random = new SecureRandom();
 
     public CollectionService(CollectionRepository links, SubmissionRepository submissions, SpecProjectRepository projects,
                              SpecItemRepository items, SpecService specs, UploadService uploads, StorageService storage,
-                             ObjectMapper mapper, org.springframework.transaction.PlatformTransactionManager tm) {
+                             ObjectMapper mapper, org.springframework.transaction.PlatformTransactionManager tm, SpecFormService forms) {
         this.links = links; this.submissions = submissions; this.projects = projects; this.items = items;
         this.specs = specs; this.uploads = uploads; this.storage = storage; this.mapper = mapper;
         this.tx = new TransactionTemplate(tm);
+        this.forms = forms;
     }
 
     public List<ObjectNode> list(long uid, String projectId) {
@@ -51,7 +53,8 @@ public class CollectionService {
         if (days < 1 || days > 30) throw invalid("有效期需为 1-30 天");
         return tx.execute(status -> {
             var p = specs.lockProject(uid, projectId);
-            if (specs.spec(p).path("slots").isEmpty()) throw invalid("请先保存至少一项材料规范");
+            if (specs.spec(p).path("slots").isEmpty() && forms.configFor(projectId).path("fields").isEmpty())
+                throw invalid("请先保存材料规范，或设置在线收集表的字段");
             // One active link per project; regeneration immediately invalidates older links.
             for (CollectionLink old : links.findByProjectIdOrderByCreatedAtDesc(projectId)) {
                 old.setEnabled(0); links.save(old);
@@ -92,6 +95,10 @@ public class CollectionService {
         ObjectNode n = mapper.createObjectNode().put("name", p.getName()).put("expiresAt", link.getExpiresAt())
                 .put("maxFileBytes", MAX_FILE_BYTES);
         var slots = n.putArray("slots");
+        if (!forms.configFor(p.getId()).path("fields").isEmpty()) {
+            n.set("form", forms.configFor(p.getId()));
+            n.put("formKey", p.getId());
+        }
         for (JsonNode s : specs.spec(p).path("slots")) {
             ObjectNode slot = slots.addObject().put("key", s.path("key").asText()).put("label", s.path("label").asText())
                     .put("kind", s.path("kind").asText()).put("required", s.path("required").asBoolean());
@@ -101,13 +108,21 @@ public class CollectionService {
     }
 
     public ObjectNode submit(String token, String name, String identifier, String slotKey, String requestKey, MultipartFile file) {
+        return submit(token, name, identifier, slotKey, requestKey, file, null, SpecFormService.Access.shared(token, null, null));
+    }
+
+    public ObjectNode submit(String token, String name, String identifier, String slotKey, String requestKey, MultipartFile file,
+                             String rowId, SpecFormService.Access access) {
+        CollectionLink initial = requireToken(token);
+        if (!forms.configFor(initial.getProjectId()).path("fields").isEmpty() && (rowId == null || rowId.isBlank()))
+            throw invalid("请先填写收集表，再为记录添加附件");
+        if (rowId != null) name = forms.authorizeUpload(access, rowId);
         String submittedName = clean(name, 80, "姓名", true);
         String submittedId = clean(identifier, 80, "编号", false);
         String key = clean(requestKey, 80, "提交标识", true);
         if (!key.matches("[a-zA-Z0-9_-]{16,80}")) throw invalid("提交标识无效，请刷新后重试");
-        CollectionLink initial = requireToken(token);
         Optional<Submission> previous = submissions.findByCollectionIdAndRequestKey(initial.getId(), key);
-        if (previous.isPresent()) return receipt(previous.get());
+        if (previous.isPresent()) return receiptForRow(previous.get(), rowId);
         if (file == null || file.isEmpty()) throw invalid("请选择文件");
         if (file.getSize() > MAX_FILE_BYTES) throw new ApiException(ErrorCode.FILE_TOO_LARGE, "收集链接的单个文件不能超过 200MB");
         checkQuota(initial, file.getSize());
@@ -119,9 +134,10 @@ public class CollectionService {
         try {
             ObjectNode result = tx.execute(status -> {
                 var p = specs.lockProject(project.getOwnerId(), project.getId());
+                if (rowId != null) forms.authorizeUpload(access, rowId);
                 CollectionLink link = requireToken(token); // expiry/revocation/quota can change during upload
                 Optional<Submission> duplicate = submissions.findByCollectionIdAndRequestKey(link.getId(), key);
-                if (duplicate.isPresent()) return receipt(duplicate.get());
+                if (duplicate.isPresent()) return receiptForRow(duplicate.get(), rowId);
                 checkQuota(link, uploaded.getSizeBytes());
                 JsonNode slot = requireSlot(p, slotKey);
                 if (!SpecMatcher.compatible(slot.path("kind").asText(), uploaded.kind())) throw invalid("文件类型与所选材料项不符");
@@ -152,7 +168,9 @@ public class CollectionService {
                 it.setPersonKey(person); it.setSlotKey(slotKey); it.setMatchMethod("SUBMISSION");
                 it.setMatchNote(person == null ? "链接提交，身份待负责人确认" : "按提交姓名、编号及所选材料项登记");
                 it.setSubmittedBy(submittedName); it.setSubmittedIdentifier(submittedId); it.setSubmissionId(submission.getId());
+                it.setFormRowId(rowId);
                 specs.applyStatus(it, specs.spec(p), uploaded, true); items.save(it);
+                if (rowId != null) forms.attached(access, rowId, uploaded.getOriginalName());
                 link.setUsedFiles(link.getUsedFiles() + 1); link.setUsedBytes(link.getUsedBytes() + uploaded.getSizeBytes()); links.save(link);
                 return receipt(submission);
             });
@@ -195,6 +213,11 @@ public class CollectionService {
     private ObjectNode receipt(Submission s) {
         return mapper.createObjectNode().put("receipt", s.getId()).put("filename", s.getFilename()).put("submittedAt", s.getCreatedAt());
     }
+    private ObjectNode receiptForRow(Submission submission, String rowId) {
+        if (rowId != null && items.findBySubmissionId(submission.getId()).filter(i -> rowId.equals(i.getFormRowId())).isEmpty())
+            throw new ApiException(ErrorCode.VERSION_CONFLICT, "此提交标识已用于其他记录，请重新选择附件");
+        return receipt(submission);
+    }
     private static String clean(String value, int max, String label, boolean required) {
         String s = value == null ? "" : value.trim();
         if ((required && s.isEmpty()) || s.length() > max || s.chars().anyMatch(Character::isISOControl)) throw invalid(label + "填写不正确");
@@ -202,7 +225,7 @@ public class CollectionService {
     }
     private static ApiException invalid(String message) { return new ApiException(ErrorCode.VALIDATION_FAILED, message); }
     private static ApiException unavailable() { return new ApiException(ErrorCode.NOT_FOUND, "收集链接不存在、已到期或已停止收集"); }
-    private static String hash(String token) {
+    static String hash(String token) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8))); }
         catch (java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
     }

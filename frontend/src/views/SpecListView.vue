@@ -42,7 +42,7 @@ async function create() {
   <main id="main" class="sl workspace-page">
     <header class="head">
       <h1>材料规范官</h1>
-      <p>贴入通知、确认规范，分享链接邀请大家免登录提交；只有你能查看全部资料。用 AI 整理人员与材料分类，核对缺交、修正格式，最后生成交付包。已有文件也可以直接拖入。</p>
+      <p>创建在线收集表，设置字段与查看、编辑权限，分享链接邀请大家填写并上传附件。信息自动汇总，支持多人协作、一键统计和 Excel 导出；材料还可交给 AI 分类，再检查、修正和打包交付。</p>
     </header>
 
     <form class="card new" @submit.prevent="create">
@@ -55,7 +55,7 @@ async function create() {
     <section class="list" :aria-busy="loading">
       <RouterLink v-for="p in list" :key="p.id" :to="`/workspace/specs/${p.id}`" class="card item">
         <strong>{{ p.name }}</strong>
-        <span class="meta">{{ p.slots }} 项材料 · {{ p.people }} 人 · {{ p.files }} 个文件</span>
+        <span class="meta"><template v-if="p.records">{{ p.records }} 条表格记录 · {{ p.files }} 个文件</template><template v-else>{{ p.slots }} 项材料 · {{ p.people }} 人 · {{ p.files }} 个文件</template></span>
         <span class="when">{{ relativeTime(p.updatedAt) }}</span>
       </RouterLink>
       <p v-if="!loading && !list.length && !error" class="empty">还没有项目。</p>

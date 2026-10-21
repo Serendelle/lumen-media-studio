@@ -300,6 +300,7 @@ export interface SpecProject {
 }
 
 export interface SpecProjectSummary {
+  records: number
   id: string
   name: string
   slots: number
@@ -368,6 +369,8 @@ export interface CollectionLink {
 }
 
 export interface PublicCollection {
+  form?: import('./forms').FormConfig
+  formKey?: string
   name: string
   expiresAt: number
   maxFileBytes: number

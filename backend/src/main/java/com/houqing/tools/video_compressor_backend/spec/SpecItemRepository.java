@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SpecItemRepository extends JpaRepository<SpecEntities.SpecItem, String> {
+    Optional<SpecEntities.SpecItem> findBySubmissionId(String submissionId);
     List<SpecEntities.SpecItem> findByProjectIdOrderByCreatedAtAsc(String projectId);
     Optional<SpecEntities.SpecItem> findByIdAndProjectId(String id, String projectId);
     Optional<SpecEntities.SpecItem> findByProjectIdAndFileId(String projectId, String fileId);

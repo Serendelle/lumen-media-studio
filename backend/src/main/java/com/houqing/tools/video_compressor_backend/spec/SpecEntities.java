@@ -72,6 +72,8 @@ public final class SpecEntities {
         private String submittedIdentifier;
         @Column(name = "submission_id")
         private String submissionId;
+        @Column(name = "form_row_id")
+        private String formRowId;
         /** UNMATCHED | OK | FIXABLE | INVALID | FIXING | FIXED | FIX_FAILED | DUPLICATE */
         @Column(nullable = false)
         private String status;
