@@ -1,4 +1,4 @@
-import { getJson, http, idempotencyKey, postJson } from './http'
+import { getJson, http, publicHttp, idempotencyKey, postJson } from './http'
 import type {
   AuthResult,
   CompressionPlan,
@@ -14,6 +14,8 @@ import type {
   SpecItem,
   SpecProject,
   SpecProjectSummary,
+  CollectionLink,
+  PublicCollection,
   FileView,
   MediaCompare,
   MetadataCapability,
@@ -61,6 +63,10 @@ export const specsApi = {
   setTemplates: async (id: string, docxFileId?: string | null, xlsxFileId?: string | null, xlsxHeaderRow?: number | null) =>
     (await http.put<SpecProject>(`${sp(id)}/templates`, { docxFileId, xlsxFileId, xlsxHeaderRow })).data,
   board: (id: string) => getJson<SpecBoard>(`${sp(id)}/items`),
+  collections: (id: string) => getJson<CollectionLink[]>(`${sp(id)}/collections`),
+  createCollection: (id: string, days: number) => postJson<CollectionLink>(`${sp(id)}/collections`, { days }),
+  revokeCollection: (id: string, linkId: string) => http.delete(`${sp(id)}/collections/${encodeURIComponent(linkId)}`),
+  organize: (id: string) => postJson<SpecBoard>(`${sp(id)}/organize`, {}, { timeout: 180_000 }),
   attach: (id: string, files: { fileId: string; relativePath: string }[]) => postJson<SpecBoard>(`${sp(id)}/items`, { files }),
   assign: async (id: string, itemId: string, personKey: string | null, slotKey: string | null) =>
     (await http.patch<SpecItem>(`${sp(id)}/items/${encodeURIComponent(itemId)}`, { personKey, slotKey })).data,
@@ -69,6 +75,19 @@ export const specsApi = {
   deliver: (id: string, onlyComplete: boolean, includeOriginals: boolean) =>
     postJson<{ taskId: string; status: string }>(`${sp(id)}/deliveries`, { onlyComplete, includeOriginals }, withKey()),
   deliveries: (id: string) => getJson<TaskView[]>(`${sp(id)}/deliveries`),
+}
+
+const collectionPath = (token: string) => `/api/public/collections/${encodeURIComponent(token)}`
+export const collectionApi = {
+  get: async (token: string) => (await publicHttp.get<PublicCollection>(collectionPath(token))).data,
+  submit: async (token: string, file: File, name: string, identifier: string, slotKey: string, requestKey: string,
+    progress: (percent: number) => void) => {
+    const form = new FormData()
+    form.append('file', file); form.append('name', name); form.append('identifier', identifier)
+    form.append('slotKey', slotKey); form.append('requestKey', requestKey)
+    return (await publicHttp.post<{ receipt: string; filename: string; submittedAt: number }>(`${collectionPath(token)}/submissions`, form,
+      { onUploadProgress: (e) => progress(e.total ? Math.min(99, Math.round(e.loaded * 100 / e.total)) : 0) })).data
+  },
 }
 
 const ls = (id: string) => `/api/v2/lessons/${encodeURIComponent(id)}`

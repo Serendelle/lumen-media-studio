@@ -7,7 +7,7 @@ import { filesFromDrop, filesFromInput, type PathedFile } from '@/utils/folderDr
 import { bytes } from '@/utils/format'
 
 const props = defineProps<{ project: SpecProject }>()
-const emit = defineEmits<{ changed: [b: SpecBoard] }>()
+const emit = defineEmits<{ changed: [b: SpecBoard]; saved: [p: SpecProject] }>()
 const toast = useToast()
 
 const board = ref<SpecBoard | null>(null)
@@ -26,25 +26,29 @@ const STATUS: Record<ItemStatus | 'MISSING', { l: string; tone: string }> = {
   MISSING: { l: '缺', tone: 't-miss' },
 }
 
+let loading = false
 async function load() {
+  if (loading) return
+  loading = true
   try {
-    board.value = await specsApi.board(props.project.id)
+    const [b, p] = await Promise.all([specsApi.board(props.project.id), specsApi.get(props.project.id)])
+    board.value = b
+    emit('saved', p)
     error.value = null
     emit('changed', board.value)
   } catch (e) {
     error.value = (e as Error).message
+  } finally {
+    loading = false
   }
 }
 onMounted(load)
 watch(() => props.project.version + '|' + (props.project.roster?.fileId ?? ''), load)
 
-// poll only while fixes are running; the server folds finished fix tasks in on read
+// New anonymous submissions and finished fixes appear while the organizer keeps this board open.
 let timer: number | undefined
 const fixing = computed(() => board.value?.items.some((i) => i.status === 'FIXING') ?? false)
-watch(fixing, (on) => {
-  window.clearInterval(timer)
-  if (on) timer = window.setInterval(load, 2500)
-}, { immediate: true })
+onMounted(() => { timer = window.setInterval(load, 8000) })
 onBeforeUnmount(() => window.clearInterval(timer))
 
 // ---- intake ----
@@ -122,6 +126,19 @@ async function remove(it: SpecItem) {
   }
 }
 const fixingBusy = ref(false)
+const organizing = ref(false)
+const organization = ref<{ matched: number; pending: number } | null>(null)
+async function organize() {
+  organizing.value = true
+  try {
+    const b = await specsApi.organize(props.project.id)
+    board.value = b
+    organization.value = b.organization ?? null
+    emit('changed', b)
+    toast.ok(`已整理 ${b.organization?.matched ?? 0} 个文件，${b.organization?.pending ?? 0} 个待确认`)
+  } catch (e) { toast.error((e as Error).message) }
+  finally { organizing.value = false }
+}
 async function fixAll() {
   fixingBusy.value = true
   try {
@@ -173,9 +190,14 @@ function openCell(itemId?: string) {
       <header class="hd">
         <h2>收齐情况</h2>
         <span class="sum">{{ board.summary.complete }} / {{ board.summary.people }} 人必交材料齐全 · 共 {{ board.summary.files }} 个文件</span>
+        <button type="button" class="btn btn--sm" :disabled="organizing || uploading || !board.items.length || !project.ai.configured" @click="organize">{{ organizing ? 'AI 整理中…' : '✦ AI 一键整理' }}</button>
+        <button type="button" class="btn btn--sm btn--ghost" @click="load">刷新</button>
         <button v-if="fixable" type="button" class="btn btn--sm" :disabled="fixingBusy" @click="fixAll">一键修正 {{ fixable }} 个文件</button>
         <span v-if="fixing" class="chip chip--fog">修正进行中，自动刷新</span>
       </header>
+      <p class="muted">AI 参考文件名、提交姓名和材料名称，补全未匹配的分类；不会发送文件内容、名单电话或编号。手动分配和已确认的提交分类会保留，格式问题仍由规范检查判断。</p>
+      <p v-if="!project.ai.configured" class="warn">AI 尚未配置，可以先手动匹配。</p>
+      <p v-if="organization" class="muted" role="status">本次整理 {{ organization.matched }} 个文件 · {{ organization.pending }} 个仍待确认。单次最多整理 100 个待匹配文件；其余可继续点击整理。</p>
       <div v-if="board.people.length" class="grid-wrap">
         <table class="grid">
           <thead>
@@ -211,6 +233,7 @@ function openCell(itemId?: string) {
           <div class="top">
             <span class="st" :class="STATUS[it.status].tone">{{ STATUS[it.status].l }}</span>
             <span class="path" :title="it.relativePath">{{ it.relativePath }}</span>
+            <span v-if="it.submittedBy" class="chip chip--fog">{{ it.submittedBy }} 提交</span>
             <span class="mono sz">{{ bytes(it.sizeBytes) }}</span>
           </div>
           <div class="asg" @click.stop>

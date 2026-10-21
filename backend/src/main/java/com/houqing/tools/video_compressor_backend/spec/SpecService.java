@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.*;
@@ -20,8 +21,7 @@ import java.util.*;
 /**
  * The material spec desk: a project holds the confirmed spec, the roster and the templates; files dropped into it
  * become items that are matched (person × material), checked against the spec, and optionally fixed by ordinary
- * tasks. Everything here is deterministic; the only model involvement is drafting the spec from the notice
- * ({@link SpecExtractor}), and that draft has to be confirmed through {@link #saveSpec}.
+ * tasks. AI proposals are validated before being applied; checks and delivery remain deterministic.
  */
 @Service
 public class SpecService {
@@ -73,13 +73,21 @@ public class SpecService {
         return projects.findByIdAndOwnerId(id, uid).orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "项目不存在或无权访问"));
     }
 
+    /** Serialize project mutations in both SQLite and PostgreSQL. Caller must have a transaction. */
+    SpecProject lockProject(long uid, String id) {
+        require(uid, id);
+        projects.lockProject(id);
+        return require(uid, id);
+    }
+
     public Page<SpecProject> list(long uid, int page, int size) {
         return projects.findByOwnerId(uid, PageRequest.of(Math.max(0, page), Math.min(100, Math.max(1, size)),
                 Sort.by(Sort.Direction.DESC, "updatedAt")));
     }
 
+    @Transactional
     public void delete(long uid, String id) {
-        SpecProject p = require(uid, id);
+        SpecProject p = lockProject(uid, id);
         // the files stay in the user's library; they just fall back to the normal retention
         for (SpecItem it : items.findByProjectIdOrderByCreatedAtAsc(id)) {
             release(uid, it.getFileId());
@@ -106,8 +114,9 @@ public class SpecService {
     }
 
     /** Saves a confirmed spec (user edits or an accepted draft). Invalid specs are refused with every reason. */
+    @Transactional
     public SchemaReport saveSpec(long uid, String id, JsonNode spec, int expectedVersion, String noticeText) {
-        SpecProject p = require(uid, id);
+        SpecProject p = lockProject(uid, id);
         if (expectedVersion != p.getVersion()) throw new ApiException(ErrorCode.VERSION_CONFLICT);
         if (noticeText != null) {
             if (noticeText.length() > 20000) throw new ApiException(ErrorCode.VALIDATION_FAILED, "通知原文不能超过 20000 字");
@@ -132,8 +141,9 @@ public class SpecService {
 
     // ---------------- roster & templates ----------------
 
+    @Transactional
     public JsonNode importRoster(long uid, String id, String fileId, Integer headerRow, String nameField) {
-        SpecProject p = require(uid, id);
+        SpecProject p = lockProject(uid, id);
         MediaFile f = storage.require(uid, fileId);
         if (f.kind() != MediaKind.DOCUMENT || !"xlsx".equals(StorageService.extensionOf(f.getStoredName()))) {
             throw new ApiException(ErrorCode.VALIDATION_FAILED, "名单需为 .xlsx 文件");
@@ -149,8 +159,9 @@ public class SpecService {
         return roster;
     }
 
+    @Transactional
     public void setTemplates(long uid, String id, String docxFileId, String xlsxFileId, Integer xlsxHeaderRow) {
-        SpecProject p = require(uid, id);
+        SpecProject p = lockProject(uid, id);
         if (docxFileId != null && !docxFileId.isBlank()) {
             MediaFile f = storage.require(uid, docxFileId);
             if (!"docx".equals(StorageService.extensionOf(f.getStoredName()))) throw new ApiException(ErrorCode.VALIDATION_FAILED, "个人表模板需为 .docx");
@@ -173,8 +184,9 @@ public class SpecService {
 
     public record Attach(String fileId, String relativePath) {}
 
+    @Transactional
     public List<SpecItem> attach(long uid, String id, List<Attach> files) {
-        SpecProject p = require(uid, id);
+        SpecProject p = lockProject(uid, id);
         if (items.countByProjectId(id) + files.size() > MAX_ITEMS) throw new ApiException(ErrorCode.VALIDATION_FAILED, "一个项目最多 " + MAX_ITEMS + " 个文件");
         JsonNode spec = spec(p), roster = roster(p);
         List<SpecItem> out = new ArrayList<>();
@@ -206,8 +218,9 @@ public class SpecService {
         return out;
     }
 
+    @Transactional
     public SpecItem assign(long uid, String id, String itemId, String personKey, String slotKey) {
-        SpecProject p = require(uid, id);
+        SpecProject p = lockProject(uid, id);
         SpecItem it = items.findByIdAndProjectId(itemId, id).orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "文件不在该项目中"));
         JsonNode roster = roster(p), spec = spec(p);
         if (personKey != null && !personKey.isEmpty()) {
@@ -228,8 +241,9 @@ public class SpecService {
         return items.save(it);
     }
 
+    @Transactional
     public void removeItem(long uid, String id, String itemId) {
-        require(uid, id);
+        lockProject(uid, id);
         SpecItem it = items.findByIdAndProjectId(itemId, id).orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "文件不在该项目中"));
         release(uid, it.getFileId());
         release(uid, it.getFixedFileId());
@@ -321,7 +335,10 @@ public class SpecService {
             Optional<MediaFile> f = storage.find(p.getOwnerId(), it.getFileId());
             if (f.isEmpty()) continue;
             String oldSlot = it.getSlotKey();
-            if (!"MANUAL".equals(it.getMatchMethod())) {
+            if ("SUBMISSION".equals(it.getMatchMethod())) {
+                it.setPersonKey(CollectionService.resolvePerson(roster, it.getSubmittedBy(), it.getSubmittedIdentifier()));
+                if (!slots.containsKey(it.getSlotKey())) it.setSlotKey(null);
+            } else if (!"MANUAL".equals(it.getMatchMethod()) && !"AI".equals(it.getMatchMethod())) {
                 SpecMatcher.Match m = SpecMatcher.match(it.getRelativePath(), f.get().kind(), spec, roster);
                 it.setPersonKey(m.personKey());
                 it.setSlotKey(m.slotKey());
@@ -330,6 +347,8 @@ public class SpecService {
             } else if (it.getSlotKey() != null && !slots.containsKey(it.getSlotKey())) {
                 it.setSlotKey(null); // the slot was removed from the spec
             }
+            if (it.getPersonKey() != null && (roster == null || java.util.stream.StreamSupport.stream(roster.path("people").spliterator(), false)
+                    .noneMatch(x -> x.path("key").asText().equals(it.getPersonKey())))) it.setPersonKey(null);
             applyStatus(it, spec, f.get(), specChanged || !Objects.equals(oldSlot, it.getSlotKey()));
             it.setUpdatedAt(System.currentTimeMillis());
             items.save(it);
@@ -337,7 +356,7 @@ public class SpecService {
     }
 
     /** Recomputes the status; with resetFix=false a fix already made for this slot is kept and reflected. */
-    private void applyStatus(SpecItem it, JsonNode spec, MediaFile f, boolean resetFix) {
+    void applyStatus(SpecItem it, JsonNode spec, MediaFile f, boolean resetFix) {
         if (resetFix || it.getFixTaskId() == null) {
             it.setFixedFileId(null);
             it.setFixTaskId(null);
@@ -454,6 +473,8 @@ public class SpecService {
         if (it.getSlotKey() != null) n.put("slotKey", it.getSlotKey());
         n.put("matchMethod", it.getMatchMethod());
         if (it.getMatchNote() != null) n.put("matchNote", it.getMatchNote());
+        if (it.getSubmittedBy() != null) n.put("submittedBy", it.getSubmittedBy());
+        if (it.getSubmissionId() != null) n.put("submittedAt", it.getCreatedAt());
         n.put("status", it.getStatus());
         if (it.getCheckJson() != null) n.set("check", read(it.getCheckJson()));
         if (it.getFixedFileId() != null) n.put("fixedFileId", it.getFixedFileId());

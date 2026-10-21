@@ -63,7 +63,7 @@ const people = computed(() => {
 <template>
   <section class="card pad">
     <h2>参赛名单</h2>
-    <p class="muted">上传 .xlsx 名单：第一张工作表、一行表头、每人一行。名单只保存在本服务器，不会发送给 AI。</p>
+    <p class="muted">可上传 .xlsx 名单：第一张工作表、一行表头、每人一行。也可以直接分享收集链接，按提交姓名自动登记。点击 AI 整理时仅使用姓名，不发送名单中的电话和编号。</p>
     <div class="grid">
       <div class="field">
         <label for="rf">名单文件</label>

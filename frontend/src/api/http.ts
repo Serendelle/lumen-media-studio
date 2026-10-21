@@ -44,6 +44,12 @@ export function setUnauthorizedHandler(fn: () => void) {
 }
 
 export const http = axios.create({ baseURL: '/', timeout: 120_000 })
+/** Collection submissions stay anonymous even if an expired workspace token is saved in this browser. */
+export const publicHttp = axios.create({ baseURL: '/', timeout: 300_000 })
+publicHttp.interceptors.response.use((r) => r, (err: AxiosError<any>) => Promise.reject(
+  new ApiError(err.response?.status ?? 0, err.response?.data?.code ?? 'NETWORK',
+    err.response?.data?.message ?? (err.code === 'ECONNABORTED' ? '上传超时，可重试本次提交' : '暂时无法连接，请稍后重试')),
+))
 
 http.interceptors.request.use((config) => {
   const token = tokenStore.get()

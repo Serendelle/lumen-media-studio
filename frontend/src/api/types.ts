@@ -268,6 +268,7 @@ export interface MaterialSpec {
 }
 
 export interface Roster {
+  source?: 'COLLECTION'
   sheet: string
   headerRow: number
   fields: string[]
@@ -336,8 +337,10 @@ export interface SpecItem {
   sizeBytes?: number
   personKey?: string
   slotKey?: string
-  matchMethod: 'AUTO' | 'MANUAL' | 'NONE'
+  matchMethod: 'AUTO' | 'MANUAL' | 'SUBMISSION' | 'AI' | 'NONE'
   matchNote?: string
+  submittedBy?: string
+  submittedAt?: number
   status: ItemStatus
   check?: SpecCheck
   fixedFileId?: string
@@ -349,6 +352,26 @@ export interface SpecBoard {
   summary: { people: number; complete: number; files: number; byStatus: Record<string, number> }
   items: SpecItem[]
   started?: number
+  organization?: { matched: number; pending: number; model: string }
+}
+
+export interface CollectionLink {
+  id: string
+  active: boolean
+  expiresAt: number
+  createdAt: number
+  files: number
+  bytes: number
+  maxFiles: number
+  maxBytes: number
+  path?: string
+}
+
+export interface PublicCollection {
+  name: string
+  expiresAt: number
+  maxFileBytes: number
+  slots: SpecSlot[]
 }
 
 export interface SpecDraft {

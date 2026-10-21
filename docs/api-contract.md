@@ -255,10 +255,18 @@ V2 新业务接口统一放在 `/api/v2` 下，原有 V1 路径保持不变。
 | POST | `/{id}/fix` | `{itemIds?}`：为可修正的文件提交修正任务（复用 `video.compress` / `audio.extract` / `image.process` / `document.convert`），返回看板与 `started` |
 | POST | `/{id}/deliveries` | `{onlyComplete, includeOriginals}` + `Idempotency-Key` → 202 任务（`spec.deliver`）；同一项目已有交付在运行时返回 409 `DELIVERY_RUNNING` |
 | GET | `/{id}/deliveries` | 该项目最近的交付任务（TaskView） |
+| GET | `/{id}/collections` | 负责人查看收集链接状态、累计文件数和容量；不返回令牌 |
+| POST | `/{id}/collections` | `{days: 1..30}` → 链接状态及 `path`（令牌仅本次返回）；旧链接立即停用 |
+| DELETE | `/{id}/collections/{linkId}` | 停止收集，204 |
+| POST | `/{id}/organize` | AI 补全最多 100 个未匹配文件，返回看板及 `organization{matched,pending,model}`；只填缺失项，保留人工分配；项目并发变化返回 409 |
 
 **规范**（`spec`）：`{title, sizeUnit: DECIMAL|BINARY, slots[{key, label, kind: VIDEO|AUDIO|IMAGE|DOCUMENT, required, rules, evidence?, evidenceVerified?}], naming{pattern, evidence?}, notes[]}`。各类型可用的规则：视频为 `extensions/maxBytes/maxWidth/maxHeight/min|maxDurationSec`，音频为 `extensions/maxBytes/min|maxDurationSec`，图片为 `extensions/maxBytes/minWidth/minHeight`，文档为 `extensions/maxBytes`；其它键会被拒绝。`maxBytes` 一律是整数字节。规则有 `evidence` 时，服务端会逐字（忽略空白）核对这句话是否出现在通知原文中，找不到就把 `evidenceVerified` 设为 `false` 并给出警告。命名规则可以用名单的列名，以及 `{序号}`、`{材料}`、`{原文件名}`；"材料名称"等说法会自动归一为 `{材料}`。
 
 **匹配**（确定性规则，不调用模型）：优先按学号/编号（≥ 4 位）匹配；其次按姓名，多个姓名同时命中时取最长的那个，且必须唯一；名单中有重名，或匹配不唯一时，留给用户手动指定。材料项按文件类型匹配，同类型有多个材料项时再按名称区分。
+
+**分享收集**（匿名）：`GET /api/public/collections/{token}` 仅返回项目名称、公开材料要求、到期时间和单文件上限；`POST /api/public/collections/{token}/submissions` 为 multipart：`file`、`name`、`identifier?`、`slotKey`、`requestKey`（16-80 位字母/数字/下划线/短横线）。成功仅返回 `{receipt, filename, submittedAt}`，不返回内部文件 ID、匹配结果或名单。同链接同 `requestKey` 重试返回原回执，不重复保存文件；没有公开的提交列表或下载接口。无效、停用、到期令牌统一 404。单文件 200MiB；链接累计 500 文件 / 2GiB，额度耗尽或 IP 每分钟超过 60 次返回 429。负责人看板项目含 `submittedBy`、`submittedAt`；`matchMethod` 新增 `SUBMISSION` 和 `AI`。
+
+**AI 整理**：仅发送文件名/路径、提交姓名、名单姓名及材料名称/类型；不发送文件内容和名单其他列。模型仅能提出已有项目中的 item/person/slot key，所有结果先整体校验，低于 0.9 置信度的建议不应用，材料类型不兼容或存在未知 key 时整次拒绝并保持原状态。模型请求期间不持有数据库写锁；应用前核对规范、名单及材料快照，防止覆盖并发修改。
 
 **材料状态**：`UNMATCHED`（未匹配）、`OK`（合格）、`FIXABLE`（可自动修正）、`INVALID`（不合格且无法修正）、`FIXING`（修正中）、`FIXED`（已修正，修正后的文件按同一套规则重新检查通过）、`FIX_FAILED`（修正失败）。
 

@@ -7,6 +7,7 @@ const router = createRouter({
     { path: '/', name: 'home', component: () => import('@/views/ReactLandingView.vue'), meta: { title: 'Lumen · 流明智媒' } },
     // previous Vue landing page, kept as a fallback
     { path: '/classic', name: 'home-classic', component: () => import('@/views/LandingView.vue'), meta: { title: 'Lumen · 流明智媒' } },
+    { path: '/collect/:token', name: 'collection-submit', component: () => import('@/views/CollectionSubmitView.vue'), meta: { title: '提交材料 · Lumen', publicCollection: true } },
     { path: '/login', name: 'login', component: () => import('@/views/AuthView.vue'), meta: { title: '登录 · Lumen', guestOnly: true } },
     { path: '/register', name: 'register', component: () => import('@/views/AuthView.vue'), meta: { title: '注册 · Lumen', guestOnly: true } },
     {
@@ -42,6 +43,7 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
+  if (to.meta.publicCollection) return
   const auth = useAuthStore()
   await auth.restore()
   if (to.meta.requiresAuth && !auth.isAuthenticated) {

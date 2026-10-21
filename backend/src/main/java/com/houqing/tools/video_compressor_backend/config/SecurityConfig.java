@@ -47,6 +47,8 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/public/collections/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/public/collections/*/submissions").permitAll()
                         .requestMatchers("/api/system/**", "/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // downloads authorize with either a bearer token or a signed short-lived ticket (checked in controller)

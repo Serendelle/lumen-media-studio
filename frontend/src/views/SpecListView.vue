@@ -42,7 +42,7 @@ async function create() {
   <main id="main" class="sl workspace-page">
     <header class="head">
       <h1>材料规范官</h1>
-      <p>收上来的材料乱七八糟？贴入比赛通知，导入名单，把整个文件夹拖进来：系统对照规范逐项检查、自动修正，最后按你的模板生成可直接交付的材料包。</p>
+      <p>贴入通知、确认规范，分享链接邀请大家免登录提交；只有你能查看全部资料。用 AI 整理人员与材料分类，核对缺交、修正格式，最后生成交付包。已有文件也可以直接拖入。</p>
     </header>
 
     <form class="card new" @submit.prevent="create">

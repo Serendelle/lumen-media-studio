@@ -61,11 +61,17 @@ public final class SpecEntities {
         private String personKey;
         @Column(name = "slot_key")
         private String slotKey;
-        /** AUTO | MANUAL | NONE */
+        /** AUTO | MANUAL | SUBMISSION | AI | NONE */
         @Column(name = "match_method", nullable = false)
         private String matchMethod;
         @Column(name = "match_note")
         private String matchNote;
+        @Column(name = "submitted_by")
+        private String submittedBy;
+        @Column(name = "submitted_identifier")
+        private String submittedIdentifier;
+        @Column(name = "submission_id")
+        private String submissionId;
         /** UNMATCHED | OK | FIXABLE | INVALID | FIXING | FIXED | FIX_FAILED | DUPLICATE */
         @Column(nullable = false)
         private String status;

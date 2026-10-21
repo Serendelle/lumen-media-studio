@@ -55,7 +55,7 @@ public class FrontendConfig implements WebMvcConfigurer {
     /** SPA routes: forward to index.html so a refresh on /workspace/... (or the legacy /studio) works. */
     @Controller
     static class SpaFallback {
-        @GetMapping({"/", "/login", "/register", "/studio", "/studio/**", "/workspace", "/workspace/**", "/{page:[a-zA-Z0-9_-]+}"})
+        @GetMapping({"/", "/login", "/register", "/collect/**", "/studio", "/studio/**", "/workspace", "/workspace/**", "/{page:[a-zA-Z0-9_-]+}"})
         public String index() {
             return "forward:/index.html";
         }

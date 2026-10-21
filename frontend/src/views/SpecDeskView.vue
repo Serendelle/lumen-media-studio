@@ -5,6 +5,7 @@ import SpecEditor from '@/components/spec/SpecEditor.vue'
 import RosterPanel from '@/components/spec/RosterPanel.vue'
 import IntakeBoard from '@/components/spec/IntakeBoard.vue'
 import DeliveryPanel from '@/components/spec/DeliveryPanel.vue'
+import CollectionPanel from '@/components/spec/CollectionPanel.vue'
 import { specsApi } from '@/api/endpoints'
 import type { SpecBoard, SpecProject } from '@/api/types'
 import { useToast } from '@/composables/useToast'
@@ -20,8 +21,9 @@ const summary = ref<SpecBoard['summary'] | null>(null)
 const STEPS = [
   { k: 'spec', l: '① 规范' },
   { k: 'roster', l: '② 名单' },
-  { k: 'intake', l: '③ 材料' },
-  { k: 'deliver', l: '④ 交付' },
+  { k: 'collect', l: '③ 分享收集' },
+  { k: 'intake', l: '④ 材料与 AI 整理' },
+  { k: 'deliver', l: '⑤ 交付' },
 ] as const
 type Step = (typeof STEPS)[number]['k']
 const step = computed<Step>({
@@ -31,6 +33,7 @@ const step = computed<Step>({
 const done = computed<Record<Step, boolean>>(() => ({
   spec: (project.value?.spec.slots.length ?? 0) > 0,
   roster: !!project.value?.roster,
+  collect: false,
   intake: (summary.value?.files ?? 0) > 0,
   deliver: false,
 }))
@@ -38,6 +41,7 @@ const done = computed<Record<Step, boolean>>(() => ({
 onMounted(async () => {
   try {
     project.value = await specsApi.get(id.value)
+    summary.value = (await specsApi.board(id.value)).summary
   } catch (e) {
     error.value = (e as Error).message
   }
@@ -79,7 +83,8 @@ async function remove() {
 
       <SpecEditor v-if="step === 'spec'" :project="project" @saved="saved" />
       <RosterPanel v-else-if="step === 'roster'" :project="project" @saved="saved" />
-      <IntakeBoard v-else-if="step === 'intake'" :project="project" @changed="(b) => (summary = b.summary)" />
+      <CollectionPanel v-else-if="step === 'collect'" :project="project" />
+      <IntakeBoard v-else-if="step === 'intake'" :project="project" @changed="(b) => (summary = b.summary)" @saved="saved" />
       <DeliveryPanel v-else :project="project" :complete="summary?.complete ?? 0" :people="summary?.people ?? project.roster?.people.length ?? 0" @saved="saved" />
 
       <dialog ref="dlg" class="dlg" aria-labelledby="dt">
