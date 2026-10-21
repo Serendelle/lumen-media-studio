@@ -1,4 +1,4 @@
-# Backend · Lumière Media Studio
+# Backend · Lumen 流明智媒
 
 Spring Boot 3.5 / Java 17 媒体处理服务，专业模式和 AI 模式共用这一套服务。
 

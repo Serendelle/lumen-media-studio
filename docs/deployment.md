@@ -27,7 +27,7 @@ powershell -ExecutionPolicy Bypass -File scripts\start-windows.ps1       # 启�
 | 依赖 | 必需 | 用途 | 安装命令 |
 |---|---|---|---|
 | JDK 17+ | ✅ | 后端 | `winget install EclipseAdoptium.Temurin.21.JDK` |
-| Node.js 18+ | ✅（首次构建前端） | 前端构建 | `winget install OpenJS.NodeJS.LTS` |
+| Node.js 22.12+（或 20.19+ 的 20.x 版本） | ✅（首次构建前端） | 前端构建 | `winget install OpenJS.NodeJS.LTS` |
 | FFmpeg / FFprobe | ✅ | 视频、音频 | `winget install Gyan.FFmpeg` |
 | ExifTool | ✅ | 元数据与隐私 | `winget install OliverBetz.ExifTool` |
 | ImageMagick | 可选 | 图片处理、PDF | `winget install ImageMagick.ImageMagick` |
