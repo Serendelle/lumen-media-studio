@@ -52,7 +52,7 @@ powershell -ExecutionPolicy Bypass -File scripts\start-windows.ps1       # 启�
 - Key 只由后端读取，前端代码、浏览器请求、日志和接口响应中都不会出现（已扫描构建产物和测试日志验证）。
 - 如果系统环境变量里已经设置了 `DEEPSEEK_API_KEY`，环境变量的优先级高于 `.env`。
 - 没有 Key 时，专业模式完全可用，智能模式会显示「AI 未配置」。
-- 可选配置：`DEEPSEEK_MODEL`（默认 `deepseek-chat`）、`DEEPSEEK_BASE_URL`、`DEEPSEEK_PROXY`（只对 DeepSeek 请求生效的出站代理）。
+- 可选配置：`DEEPSEEK_MODEL`（默认 `deepseek-flash`）、`DEEPSEEK_BASE_URL`、`DEEPSEEK_PROXY`（只对 DeepSeek 请求生效的出站代理）。
 
 ## 4. AI 抠图（可选）
 
