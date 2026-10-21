@@ -145,7 +145,7 @@ watch(() => active.value?.id, async (id) => {
   overflow: auto;
   border-radius: var(--r-md);
   background:
-    radial-gradient(circle at 1px 1px, rgba(48, 58, 55, 0.08) 1px, transparent 0) 0 0 / 18px 18px,
+    radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0 / 18px 18px,
     var(--surface);
 }
 .svg {

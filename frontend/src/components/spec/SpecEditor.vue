@@ -232,7 +232,7 @@ h3 { font-size: var(--fs-sm); }
 .lbl { font-size: var(--fs-xs); color: var(--text-3); margin-right: 4px; }
 .fmt { min-height: 32px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r-pill); background: var(--surface); font-size: var(--fs-xs); color: var(--text-2); }
 .fmt.on { border-color: var(--mint-ink); background: var(--mint); color: var(--mint-ink); }
-.ev { font-size: var(--fs-xs); line-height: 1.6; color: var(--text-2); padding: 8px 10px; border-radius: var(--r-sm); background: rgba(217, 237, 228, 0.4); }
+.ev { font-size: var(--fs-xs); line-height: 1.6; color: var(--text-2); padding: 8px 10px; border-radius: var(--r-sm); background: var(--accent-soft); }
 .ev.bad { background: var(--apricot); color: var(--apricot-ink); }
 .tag { margin-right: 6px; font-weight: 600; }
 .rm { justify-self: end; }

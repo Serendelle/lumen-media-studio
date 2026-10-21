@@ -1,41 +1,39 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import TaskCard from './TaskCard.vue'
-import Icon from '@/components/common/Icon.vue'
 import ResultPreview from './ResultPreview.vue'
 import type { TaskView } from '@/api/types'
 import { useTasksStore } from '@/stores/tasks'
 
+/** Right-hand task panel: bordered, collapsible groups of compact rows. */
 const tasks = useTasksStore()
-const filter = ref<'all' | 'active' | 'done'>('all')
 const previewing = ref<TaskView | null>(null)
 
-const shown = computed(() => {
-  if (filter.value === 'active') return tasks.active
-  if (filter.value === 'done') return tasks.list.filter((t) => t.status === 'SUCCEEDED')
-  return tasks.list
-})
+const KEY = 'lumen.tray-collapsed'
+const collapsed = reactive<Record<string, boolean>>({})
+try { Object.assign(collapsed, JSON.parse(localStorage.getItem(KEY) ?? '{}')) } catch { /* defaults: all open */ }
+watch(collapsed, (v) => { try { localStorage.setItem(KEY, JSON.stringify(v)) } catch { /* session only */ } })
+
+const groups = computed(() => [
+  { k: 'active', l: '进行中', items: tasks.active, empty: '没有正在处理的任务' },
+  { k: 'done', l: '已完成', items: tasks.list.filter((t) => t.status === 'SUCCEEDED'), empty: '完成的任务会出现在这里' },
+  { k: 'failed', l: '失败与取消', items: tasks.list.filter((t) => t.status === 'FAILED' || t.status === 'CANCELLED'), empty: '' },
+].filter((g) => g.k !== 'failed' || g.items.length))
 </script>
 
 <template>
-  <aside class="tray" aria-label="任务列表">
-    <header class="head">
-      <h2>任务</h2>
-      <span v-if="tasks.active.length" class="chip chip--fog">{{ tasks.active.length }} 个进行中</span>
-    </header>
-    <div class="filters" role="tablist" aria-label="任务筛选">
-      <button v-for="f in [{ k: 'all', l: '全部' }, { k: 'active', l: '进行中' }, { k: 'done', l: '已完成' }] as const" :key="f.k"
-              type="button" role="tab" :aria-selected="filter === f.k" :class="{ on: filter === f.k }" @click="filter = f.k">
-        {{ f.l }}
+  <aside class="tray" aria-label="任务">
+    <section v-for="g in groups" :key="g.k" class="grp" :class="`g-${g.k}`">
+      <button type="button" class="gh" :aria-expanded="!collapsed[g.k]" :aria-controls="`tray-${g.k}`" @click="collapsed[g.k] = !collapsed[g.k]">
+        <span class="gl">{{ g.l }}</span>
+        <svg class="chev" :class="{ shut: collapsed[g.k] }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+        <span class="cnt mono" :class="{ live: g.k === 'active' && g.items.length }">{{ g.items.length }}</span>
       </button>
-    </div>
-    <TransitionGroup tag="div" name="list" class="list" aria-live="polite">
-      <TaskCard v-for="t in shown" :key="t.taskId" :task="t" @preview="previewing = $event" />
-    </TransitionGroup>
-    <div v-if="!shown.length" class="empty">
-      <span class="ei"><Icon name="spark" :size="20" /></span>
-      <p>{{ filter === 'all' ? '提交的任务会出现在这里，进度实时更新；刷新页面也不会丢失。' : '暂无' }}</p>
-    </div>
+      <ul v-show="!collapsed[g.k]" :id="`tray-${g.k}`" class="rows" aria-live="polite">
+        <TaskCard v-for="t in g.items" :key="t.taskId" :task="t" @preview="previewing = $event" />
+        <li v-if="!g.items.length" class="none">{{ g.empty }}</li>
+      </ul>
+    </section>
     <ResultPreview :task="previewing" @close="previewing = null" />
   </aside>
 </template>
@@ -44,71 +42,57 @@ const shown = computed(() => {
 .tray {
   display: grid;
   align-content: start;
-  gap: var(--sp-3);
+  gap: 10px;
 }
-.head {
+.grp {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.015);
+}
+.gh {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-.head h2 {
-  font-size: var(--fs-lg);
-}
-.filters {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  border-radius: var(--r-pill);
-  background: var(--surface-sunk);
-  width: max-content;
-}
-.filters button {
-  min-height: 30px;
-  padding: 0 12px;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 12px 6px;
   border: 0;
-  border-radius: var(--r-pill);
-  background: transparent;
-  font-size: var(--fs-xs);
+  background: none;
   color: var(--text-2);
+  text-align: left;
+  cursor: pointer;
 }
-.filters button.on {
-  background: var(--surface);
+.gh:hover {
   color: var(--text);
-  box-shadow: var(--shadow-1);
 }
-.list {
-  display: grid;
-  gap: 10px;
+.gl {
+  font-size: 12px;
+  font-weight: 500;
 }
-.empty {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  padding: 28px 16px;
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--r-md);
-  font-size: var(--fs-sm);
+.chev {
   color: var(--text-3);
-  text-align: center;
+  transition: transform 160ms;
 }
-.ei {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--fog);
+.chev.shut {
+  transform: rotate(-90deg);
+}
+.cnt {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.cnt.live {
   color: var(--fog-ink);
 }
-.list-enter-active,
-.list-leave-active {
-  transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out);
+.rows {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0 4px 6px;
+  list-style: none;
 }
-.list-enter-from {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-.list-leave-to {
-  opacity: 0;
+.none {
+  padding: 4px 8px 6px;
+  font-size: 12px;
+  color: var(--text-3);
 }
 </style>

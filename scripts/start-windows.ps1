@@ -58,6 +58,20 @@ if (-not $hasKey) {
     Write-Host '      用记事本打开 .env，把 DEEPSEEK_API_KEY= 后面换成你的 Key，然后重新运行本脚本。' -ForegroundColor Yellow
 }
 
+# Portable Ghostscript has no registry entry. Let ImageMagick load its DLL directly.
+$ghostscript = [Environment]::GetEnvironmentVariable('GHOSTSCRIPT_PATH')
+if ([string]::IsNullOrWhiteSpace($ghostscript) -and $envText -match '(?m)^\s*GHOSTSCRIPT_PATH\s*=([^\r\n]*)') {
+    $ghostscript = $Matches[1].Trim()
+}
+if (-not [string]::IsNullOrWhiteSpace($ghostscript)) {
+    if (-not [System.IO.Path]::IsPathRooted($ghostscript)) { $ghostscript = Join-Path $Root $ghostscript }
+    if (Test-Path -LiteralPath $ghostscript -PathType Leaf) {
+        $gsDir = Split-Path -Parent $ghostscript
+        $env:MAGICK_GHOSTSCRIPT_PATH = $gsDir
+        $env:PATH = $gsDir + [System.IO.Path]::PathSeparator + $env:PATH
+    }
+}
+
 # ---------------------------------------------------------------- 3. build
 $dist = Join-Path $Root 'frontend\dist\index.html'
 if ($Rebuild -or -not (Test-Path $dist)) {

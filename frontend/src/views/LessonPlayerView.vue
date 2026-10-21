@@ -137,9 +137,10 @@ async function remove() {
 </script>
 
 <template>
-  <main id="main" class="lp">
+  <main id="main" class="lp workspace-page pane-page">
     <p v-if="error" class="err" role="alert">{{ error }} <RouterLink to="/workspace/learn">返回</RouterLink></p>
-    <template v-else-if="view && lesson">
+    <div v-else-if="view && lesson" class="panes">
+      <div class="pane pane--main body">
       <header class="head">
         <RouterLink to="/workspace/learn" class="back">← 学习播放器</RouterLink>
         <h1>{{ lesson.title }}</h1>
@@ -153,7 +154,6 @@ async function remove() {
         <ul><li v-for="w in view.meta.warnings" :key="w">{{ w }}</li></ul>
       </details>
 
-      <div class="grid">
         <section class="left">
           <div class="player card">
             <video v-if="videoSrc" ref="video" :src="videoSrc" controls playsinline preload="metadata" @timeupdate="onTime" @seeked="onTime" />
@@ -184,7 +184,9 @@ async function remove() {
           </section>
         </section>
 
-        <section class="right card">
+      </div>
+
+        <section class="pane pane--side right">
           <div class="tabs" role="tablist">
             <button type="button" role="tab" :aria-selected="tab === 'map'" :class="{ on: tab === 'map' }" @click="tab = 'map'">知识图谱</button>
             <button type="button" role="tab" :aria-selected="tab === 'transcript'" :class="{ on: tab === 'transcript' }" @click="tab = 'transcript'">讲稿</button>
@@ -220,7 +222,6 @@ async function remove() {
           </div>
           <p class="meta">语音识别 {{ view.meta.asrModel }} · 画面识别 RapidOCR（本地）· 整理 {{ view.meta.llmModel }} · 提示词 v{{ view.meta.promptVersion }}</p>
         </section>
-      </div>
 
       <dialog ref="dlg" class="dlg" aria-labelledby="ldt">
         <h2 id="ldt">删除这节课的分析结果？</h2>
@@ -230,13 +231,13 @@ async function remove() {
           <button type="button" class="btn btn--danger" @click="remove">删除</button>
         </div>
       </dialog>
-    </template>
+    </div>
     <p v-else class="muted">加载中…</p>
   </main>
 </template>
 
 <style scoped>
-.lp { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); max-width: 1480px; margin: 0 auto; padding: var(--sp-5) var(--gutter) var(--sp-8); }
+.lp { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
 .head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--sp-3); }
 .back { font-size: var(--fs-sm); color: var(--text-3); text-decoration: none; }
 .head h1 { font-size: var(--fs-xl); }
@@ -244,7 +245,9 @@ async function remove() {
 .summary { font-size: var(--fs-sm); color: var(--text-2); line-height: 1.7; max-width: 900px; }
 .warns { font-size: var(--fs-xs); color: var(--apricot-ink); }
 .warns ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.7; }
-.grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: var(--sp-4); align-items: start; }
+.pane-page > .panes { grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr); }
+.body { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: var(--sp-3); }
+.err, .lp > .muted { padding: var(--gutter); }
 .left { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
 .player { overflow: hidden; }
 .player video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #111; }
@@ -258,7 +261,7 @@ async function remove() {
 .snips button { min-height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--surface); font-size: 12px; color: var(--text-2); }
 .snips button.on { border-color: var(--ink); background: var(--ink); color: var(--cream); }
 .snips button.live:not(.on) { border-color: var(--mint-ink); color: var(--mint-ink); }
-.right { position: sticky; top: 76px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 10px; height: calc(100vh - 100px); min-height: 520px; padding: var(--sp-4); }
+.right { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 10px; padding: var(--sp-4); overflow: hidden; }
 .tabs { display: flex; align-items: center; gap: 4px; padding: 3px; border-radius: var(--r-pill); background: var(--surface-sunk); }
 .tabs button { min-height: 32px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: transparent; font-size: var(--fs-sm); color: var(--text-2); }
 .tabs button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow-1); }
@@ -283,8 +286,7 @@ async function remove() {
 .dlg::backdrop { background: rgba(30, 36, 34, 0.45); }
 .dlg p { margin: var(--sp-3) 0; font-size: var(--fs-sm); line-height: 1.6; color: var(--text-2); }
 .row { display: flex; justify-content: flex-end; gap: var(--sp-2); }
-@media (max-width: 1099px) {
-  .grid { grid-template-columns: minmax(0, 1fr); }
-  .right { position: static; height: 560px; }
+@media (max-width: 1180px) {
+  .right { height: 560px; }
 }
 </style>

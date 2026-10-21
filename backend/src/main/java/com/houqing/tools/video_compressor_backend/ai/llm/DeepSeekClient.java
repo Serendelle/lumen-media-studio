@@ -63,6 +63,8 @@ public class DeepSeekClient implements LlmClient {
         body.set("messages", messages);
         body.put("stream", true);
         body.put("temperature", 0.2);
+        // The agent history stores content and tool calls; use the non-thinking API contract.
+        body.putObject("thinking").put("type", "disabled");
         body.putObject("stream_options").put("include_usage", true);
         if (tools != null && !tools.isEmpty()) {
             body.set("tools", tools);

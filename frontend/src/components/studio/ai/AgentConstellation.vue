@@ -85,7 +85,7 @@ const label: Record<string, string> = {
   position: absolute;
   inset: -6px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(217, 237, 228, 0.95), transparent 70%);
+  background: radial-gradient(circle, var(--accent-soft), transparent 70%);
   opacity: 0;
   transform: scale(0.6);
   transition: opacity 0.4s, transform 0.4s;

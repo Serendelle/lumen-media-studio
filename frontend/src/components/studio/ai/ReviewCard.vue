@@ -73,10 +73,10 @@ async function dl(fileId: string, name?: string) {
   gap: var(--sp-4);
   padding: var(--sp-5);
   border-radius: var(--r-lg);
-  background: linear-gradient(160deg, var(--paper), rgba(243, 227, 215, 0.6));
+  background: linear-gradient(160deg, var(--paper), var(--surface-sunk));
 }
 .review.ok {
-  background: linear-gradient(160deg, var(--paper), rgba(217, 237, 228, 0.7));
+  background: linear-gradient(160deg, var(--paper), var(--accent-soft));
 }
 .head h3 {
   margin-top: 4px;

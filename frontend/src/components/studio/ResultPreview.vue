@@ -205,7 +205,7 @@ figure img,
   aspect-ratio: 4 / 3;
   object-fit: contain;
   border-radius: var(--r-md);
-  background: repeating-conic-gradient(#ececE5 0 25%, #f7f7f2 0 50%) 50% / 18px 18px;
+  background: repeating-conic-gradient(#262626 0 25%, #1c1c1c 0 50%) 50% / 18px 18px;
 }
 .ph {
   display: grid;
@@ -258,7 +258,7 @@ figure img,
 }
 .thumbs button.on {
   border-color: var(--mint-ink);
-  background: rgba(217, 237, 228, 0.4);
+  background: var(--accent-soft);
 }
 .nm {
   overflow: hidden;
@@ -276,7 +276,7 @@ figure img,
 }
 .checker {
   object-fit: contain;
-  background: repeating-conic-gradient(#ececE5 0 25%, #f7f7f2 0 50%) 50% / 18px 18px;
+  background: repeating-conic-gradient(#262626 0 25%, #1c1c1c 0 50%) 50% / 18px 18px;
 }
 .audio {
   width: 100%;

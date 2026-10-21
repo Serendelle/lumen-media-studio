@@ -172,6 +172,8 @@ p {
 /* form controls */
 .field {
   display: grid;
+  /* keep label → control → hint packed at the top, so controls line up across a row */
+  align-content: start;
   gap: 6px;
 }
 .field > label,

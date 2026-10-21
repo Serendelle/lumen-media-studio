@@ -163,7 +163,7 @@ watch(
   color: var(--cream);
 }
 .a-quality-reviewer .bubble {
-  background: linear-gradient(160deg, var(--paper), rgba(217, 237, 228, 0.45));
+  background: linear-gradient(160deg, var(--paper), var(--accent-soft));
 }
 .bubble :deep(.li) {
   display: block;

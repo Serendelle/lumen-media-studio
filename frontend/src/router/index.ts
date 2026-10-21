@@ -15,7 +15,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
       children: [
         { path: '', name: 'workspace', component: () => import('@/views/WorkspaceHomeView.vue'), meta: { title: '概览 · Lumen' } },
-        { path: 'media', name: 'media', component: () => import('@/views/MediaWorkspaceView.vue'), meta: { title: '媒体工作台 · Lumen' } },
+        {
+          path: 'media', name: 'media', component: () => import('@/views/MediaWorkspaceView.vue'), meta: { title: '媒体工作台 · Lumen' },
+          // smart mode moved to its own page; old ?mode=ai links keep working
+          beforeEnter: (to) => (to.query.mode === 'ai' ? { path: '/workspace/ai', query: to.query.conv ? { conv: to.query.conv } : {} } : true),
+        },
+        { path: 'ai', name: 'ai', component: () => import('@/views/AiWorkspaceView.vue'), meta: { title: '智能模式 · Lumen' } },
         { path: 'documents', name: 'documents', component: () => import('@/views/DocumentWorkspaceView.vue'), meta: { title: '文档工作台 · Lumen' } },
         { path: 'specs', name: 'specs', component: () => import('@/views/SpecListView.vue'), meta: { title: '材料规范官 · Lumen' } },
         { path: 'specs/:id', name: 'spec', component: () => import('@/views/SpecDeskView.vue'), meta: { title: '材料规范官 · Lumen' } },

@@ -63,7 +63,7 @@ function clock(sec: number) {
 </script>
 
 <template>
-  <main id="main" class="ll">
+  <main id="main" class="ll workspace-page">
     <header class="head">
       <h1>学习播放器</h1>
       <p>上传一段教学视频：系统听讲解、看画面，整理出随播放生长的知识图谱；讲到代码时，代码会出现在旁边的沙盒里，改一改就能运行。</p>
@@ -114,7 +114,7 @@ function clock(sec: number) {
 </template>
 
 <style scoped>
-.ll { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); max-width: 1000px; margin: 0 auto; padding: var(--sp-6) var(--gutter) var(--sp-8); }
+.ll { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); }
 .head h1 { font-size: var(--fs-2xl); }
 .head p { margin-top: 6px; color: var(--text-2); font-size: var(--fs-sm); line-height: 1.7; }
 .caps { display: flex; flex-wrap: wrap; gap: 6px; }

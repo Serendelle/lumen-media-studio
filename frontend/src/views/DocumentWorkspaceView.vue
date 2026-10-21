@@ -96,21 +96,16 @@ const latestWarnings = computed<string[]>(() => latest.value?.result?.warnings ?
 </script>
 
 <template>
-  <main id="main" class="docs">
-    <header class="head">
-      <h1>文档工作台</h1>
-      <p>Word / Excel / 网页 转 PDF。转换在服务器本地完成，原文件不会被修改，也不会上传到第三方预览服务。</p>
-    </header>
-
-    <div class="layout">
-      <aside class="left">
-        <section class="card pad">
+  <div class="docs workspace-page pane-page">
+    <div class="panes">
+      <aside class="pane pane--left left" aria-label="选择文档">
+        <section class="pad">
           <MediaPicker v-model="selected" :kinds="['DOCUMENT', 'PDF']" label="选择文档"
                        accept=".docx,.xlsx,.html,.htm,.pdf" with-outputs />
           <p class="limits">.docx / .xlsx ≤ 30 MB · 单个 UTF-8 .html ≤ 5 MB · PDF。不接受启用宏的文档与旧版 .doc / .xls。</p>
         </section>
 
-        <section class="card pad matrix" aria-labelledby="mx">
+        <section class="pad matrix" aria-labelledby="mx">
           <h2 id="mx">支持的转换</h2>
           <p v-if="matrixError" class="err">{{ matrixError }}</p>
           <ul v-else-if="matrix">
@@ -124,7 +119,11 @@ const latestWarnings = computed<string[]>(() => latest.value?.result?.warnings ?
         </section>
       </aside>
 
-      <section class="mid">
+      <main id="main" class="pane pane--main mid">
+        <header class="head">
+          <h1>文档工作台</h1>
+          <p>Word / Excel / 网页 转 PDF。转换在服务器本地完成，原文件不会被修改，也不会上传到第三方预览服务。</p>
+        </header>
         <div v-if="!selected[0]" class="card pad empty">
           <p>从左侧上传或选择一个文档。系统会先检查它的结构、页面设置和字体，再决定能怎样转换。</p>
         </div>
@@ -231,19 +230,14 @@ const latestWarnings = computed<string[]>(() => latest.value?.result?.warnings ?
             </div>
           </section>
         </template>
-      </section>
+      </main>
 
-      <TaskTray class="tray" />
+      <div class="pane pane--side"><TaskTray /></div>
     </div>
-  </main>
+  </div>
 </template>
 
 <style scoped>
-.docs {
-  max-width: 1480px;
-  margin: 0 auto;
-  padding: var(--sp-5) var(--gutter) var(--sp-8);
-}
 .head h1 {
   font-size: var(--fs-xl);
 }
@@ -252,12 +246,19 @@ const latestWarnings = computed<string[]>(() => latest.value?.result?.warnings ?
   font-size: var(--fs-sm);
   color: var(--text-2);
 }
-.layout {
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 320px;
-  gap: var(--sp-5);
-  align-items: start;
-  margin-top: var(--sp-5);
+.pane-page > .panes {
+  grid-template-columns: 300px minmax(0, 1fr) 340px;
+}
+/* the left pane is flat: its two blocks are separated by a rule instead of floating cards */
+.left > .pad {
+  padding: 4px 4px 16px;
+}
+.left > .pad + .pad {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.mid {
+  align-content: start;
 }
 .left,
 .mid {
@@ -391,25 +392,9 @@ h2 {
 .btn {
   justify-self: start;
 }
-.tray {
-  position: sticky;
-  top: 76px;
-  max-height: calc(100vh - 92px);
-  overflow: auto;
-}
-@media (max-width: 1199px) {
-  .layout {
-    grid-template-columns: 280px minmax(0, 1fr);
-  }
-  .tray {
-    grid-column: 1 / -1;
-    position: static;
-    max-height: none;
-  }
-}
-@media (max-width: 767px) {
-  .layout {
-    grid-template-columns: 1fr;
+@media (max-width: 1180px) {
+  .pane-page > .panes {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

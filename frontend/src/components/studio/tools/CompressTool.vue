@@ -263,8 +263,10 @@ function submit() {
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--sp-4);
+  /* all six settings on one row when the panel is wide enough (≈ 930px), wrapping evenly otherwise */
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--sp-4) 12px;
+  align-items: start;
 }
 @media (max-width: 520px) {
   .facts {

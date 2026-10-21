@@ -66,14 +66,14 @@ watch(
 
 function select(id: string) {
   showHistory.value = false
-  void router.replace({ query: { ...route.query, mode: 'ai', conv: id } })
+  void router.replace({ query: { ...route.query, conv: id } })
 }
 
 async function newConversation() {
   showHistory.value = false
   const c = await ai.startNew()
   attached.value = []
-  void router.replace({ query: { ...route.query, mode: 'ai', conv: c.id } })
+  void router.replace({ query: { ...route.query, conv: c.id } })
 }
 
 async function send(override?: string) {
@@ -83,7 +83,7 @@ async function send(override?: string) {
   try {
     if (!ai.current) {
       const c = await ai.startNew()
-      void router.replace({ query: { ...route.query, mode: 'ai', conv: c.id } })
+      void router.replace({ query: { ...route.query, conv: c.id } })
     }
     await ai.send(t, attached.value)
     text.value = ''

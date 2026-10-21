@@ -1,0 +1,202 @@
+/*
+ * The supplied dashboard's dark theme (shadcn neutral, dark), scoped to the signed-in app.
+ * Lumen's own tokens are remapped here so every Vue page follows without per-page edits.
+ * Status colours stay (muted) so success / failure / warning remain distinguishable.
+ */
+.workspace-shell {
+  --sidebar-width: 260px;
+  /* palette names, remapped for dark */
+  --cream: #0a0a0a;
+  --cream-deep: #202020;
+  --paper: #171717;
+  --mint: rgb(52 211 153 / 0.12);
+  --mint-ink: #6ee7b7;
+  --fog: rgb(96 165 250 / 0.12);
+  --fog-ink: #93c5fd;
+  --apricot: rgb(251 191 36 / 0.12);
+  --apricot-ink: #fcd34d;
+  --ink: #fafafa;
+  --ink-2: #a3a3a3;
+  --ink-3: #737373;
+  --line: rgb(255 255 255 / 0.08);
+  --line-strong: rgb(255 255 255 / 0.16);
+  /* semantic */
+  --bg: #1c1c1c;
+  --surface: #171717;
+  --surface-sunk: #202020;
+  --text: #fafafa;
+  --text-2: #a3a3a3;
+  --text-3: #737373;
+  --accent: #fafafa;
+  --accent-soft: #262626;
+  --ok: #6ee7b7;
+  --warn: #fcd34d;
+  --danger: #f87171;
+  --danger-soft: rgb(248 113 113 / 0.12);
+  --focus: #a3a3a3;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-2: 0 4px 16px rgb(0 0 0 / 0.35);
+  --shadow-3: 0 24px 64px rgb(0 0 0 / 0.5);
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-pill: 6px;
+  /* the component's content area: p-6, md:p-8 */
+  --gutter: 32px;
+  --page-gap: 24px;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color-scheme: dark;
+  min-height: 100svh;
+  /* bg-card + bg-white/[0.02] of the component's main column */
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+/* the page behind the shell (overscroll, short pages) */
+html:has(.workspace-shell), body:has(.workspace-shell) { background: #1c1c1c; color-scheme: dark; }
+.workspace-shell[data-sidebar-collapsed='true'] { --sidebar-width: 0px; }
+.workspace-content {
+  min-width: 0;
+  min-height: 100svh;
+  margin-left: var(--sidebar-width);
+  padding-top: 56px;
+  transition: margin-left 300ms ease-in-out;
+}
+/* One sizing rule for every signed-in route, including project and lesson details.
+   This replaces their old 1000–1480px centered columns. Inner grids keep their own layout. */
+.workspace-shell .workspace-content > .workspace-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-gap);
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: calc(100svh - 56px);
+  margin: 0;
+  padding: var(--gutter);
+}
+.workspace-page > * { min-width: 0; }
+.workspace-shell .workspace-page > :is(header, nav, footer) { flex-shrink: 0; }
+.workspace-shell .workspace-page.home > .cols { flex: 1; }
+.workspace-shell .workspace-page.home .block { display: flex; flex-direction: column; }
+.workspace-shell .workspace-page.home .empty { flex: 1; justify-content: center; }
+.workspace-shell .workspace-page.lib > .table { display: flex; flex: 1; flex-direction: column; }
+.workspace-shell .workspace-page.lib > .table > .empty { display: grid; flex: 1; place-items: center; min-height: 200px; }
+.workspace-shell .workspace-page:is(.sl, .tc-page) > .list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: stretch;
+}
+.workspace-shell .workspace-page:is(.sl, .tc-page) > .list > .empty {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-height: 200px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.workspace-shell .workspace-page.ll > .pad { display: flex; flex: 1; flex-direction: column; }
+.workspace-shell .workspace-page.ll > .pad > .picker { display: flex; flex: 1; flex-direction: column; }
+.workspace-shell .workspace-page.ll > .pad > .picker > .drop { flex: 1; min-height: 180px; align-content: center; }
+.workspace-shell .workspace-page.ll > .pad > .go { align-self: flex-start; }
+.workspace-shell .workspace-page.docs .mid { display: flex; flex-direction: column; align-self: stretch; }
+.workspace-shell .workspace-page.docs .mid > .empty { flex: 1; min-height: 240px; place-content: center; text-align: center; }
+/* Full-bleed split pages (media, smart mode, documents, lesson player): the panes touch the
+   sidebar, the toolbar and each other; each pane scrolls on its own, like the component's main column. */
+.workspace-shell .workspace-content > .workspace-page.pane-page {
+  gap: 0;
+  height: calc(100svh - 56px);
+  min-height: 0;
+  padding: 0;
+}
+.pane-page > .panes {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  min-height: 0;
+}
+.pane-page .pane {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.12) transparent;
+}
+.pane-page .pane--main { padding: var(--gutter); }
+.pane-page .pane--left { padding: 16px; border-right: 1px solid var(--line); background: var(--surface); }
+.pane-page .pane--side { padding: 12px; border-left: 1px solid var(--line); background: var(--surface); }
+.pane-page .pane--main > .ai { min-height: 100%; }
+@media (max-width: 1180px) {
+  .workspace-shell .workspace-content > .workspace-page.pane-page { height: auto; min-height: calc(100svh - 56px); }
+  .pane-page > .panes { grid-template-columns: minmax(0, 1fr) !important; }
+  .pane-page .pane { overflow: visible; }
+  .pane-page .pane--left { border-right: 0; border-bottom: 1px solid var(--line); }
+  .pane-page .pane--side { border-left: 0; border-top: 1px solid var(--line); }
+}
+.workspace-toolbar {
+  left: var(--sidebar-width);
+  transition: left 300ms ease-in-out;
+}
+.workspace-offline {
+  margin: 16px var(--gutter) 0;
+  padding: 10px 14px;
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 12px;
+}
+.workspace-chrome.tw-root {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #171717;
+  --card-foreground: #fafafa;
+  --popover: #171717;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #171717;
+  --secondary: #262626;
+  --secondary-foreground: #fafafa;
+  --muted: #262626;
+  --muted-foreground: #a3a3a3;
+  --accent-c: #262626;
+  --accent-foreground: #fafafa;
+  --border: rgb(255 255 255 / 0.1);
+  --input: rgb(255 255 255 / 0.15);
+  --ring: #737373;
+  min-height: 0;
+  background: transparent;
+}
+.workspace-chrome :is(button, a):focus-visible { outline: 2px solid #a1a1aa; outline-offset: 2px; }
+.workspace-chrome input:focus-visible { outline: none; box-shadow: none; }
+.workspace-shell :is(h1, h2, h3, h4) { font-family: var(--font-sans); font-weight: 600; letter-spacing: -0.025em; }
+.workspace-shell .btn { letter-spacing: 0; }
+.workspace-shell .btn:hover { transform: none; }
+.workspace-shell .input:focus, .workspace-shell .select:focus { border-color: #737373; box-shadow: 0 0 0 3px rgb(255 255 255 / 0.06); }
+.workspace-shell .btn--ghost:hover { background: rgb(255 255 255 / 0.05); }
+.workspace-shell ::selection { background: rgb(255 255 255 / 0.2); }
+@media (max-width: 767px) {
+  .workspace-shell { --gutter: 24px; --page-gap: 16px; }
+  .workspace-content { margin-left: 0; }
+  .workspace-toolbar { left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace-content, .workspace-toolbar, #workspace-sidebar, #workspace-sidebar * { transition: none !important; }
+  .workspace-chrome .animate-in { animation: none; }
+}
+
+/* tw-animate-css is not installed: the two entrance animations the component uses */
+.workspace-chrome .animate-in {
+  animation: ws-enter var(--tw-duration, 150ms) ease-out both;
+}
+.workspace-chrome .animate-in.duration-100 { --tw-duration: 100ms; }
+.workspace-chrome .animate-in.duration-200 { --tw-duration: 200ms; }
+@keyframes ws-enter {
+  from { opacity: 0; transform: scale(0.95); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace-chrome .animate-in { animation: none; }
+}

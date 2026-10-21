@@ -198,7 +198,7 @@ function describe(f: FileView) {
 .drop:hover,
 .drop.dragging {
   border-color: var(--mint-ink);
-  background: rgba(217, 237, 228, 0.35);
+  background: var(--accent-soft);
 }
 .plus {
   width: 40px;
@@ -281,7 +281,7 @@ function describe(f: FileView) {
 }
 .item.on {
   border-color: var(--mint-ink);
-  background: rgba(217, 237, 228, 0.4);
+  background: var(--accent-soft);
 }
 .kind {
   font-size: 10px;

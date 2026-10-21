@@ -45,7 +45,7 @@ const m = computed(() => props.verification.measured ?? {})
   padding: 12px 14px;
   border-radius: var(--r-md);
   border: 1px solid rgba(59, 115, 96, 0.25);
-  background: rgba(217, 237, 228, 0.35);
+  background: var(--accent-soft);
 }
 .vc.bad {
   border-color: rgba(165, 70, 62, 0.3);

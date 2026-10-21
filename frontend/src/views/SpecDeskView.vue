@@ -60,7 +60,7 @@ async function remove() {
 </script>
 
 <template>
-  <main id="main" class="desk">
+  <main id="main" class="desk workspace-page">
     <p v-if="error" class="err" role="alert">{{ error }} <RouterLink to="/workspace/specs">返回项目列表</RouterLink></p>
     <template v-else-if="project">
       <header class="head">
@@ -96,7 +96,7 @@ async function remove() {
 </template>
 
 <style scoped>
-.desk { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); max-width: 1200px; margin: 0 auto; padding: var(--sp-5) var(--gutter) var(--sp-8); }
+.desk { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); }
 .head { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
 .back { font-size: var(--fs-sm); color: var(--text-3); text-decoration: none; }
 .head h1 { font-size: var(--fs-xl); }

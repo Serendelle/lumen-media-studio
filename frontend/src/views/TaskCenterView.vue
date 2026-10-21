@@ -92,7 +92,7 @@ async function copyTrace(id: string) {
 </script>
 
 <template>
-  <main id="main" class="tc-page">
+  <main id="main" class="tc-page workspace-page">
     <header class="head">
       <div>
         <h1>任务中心</h1>
@@ -165,9 +165,6 @@ async function copyTrace(id: string) {
 .tc-page {
   display: grid;
   gap: var(--sp-4);
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: var(--sp-6) var(--gutter) var(--sp-8);
 }
 .head {
   display: flex;

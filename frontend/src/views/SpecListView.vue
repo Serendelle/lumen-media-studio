@@ -39,7 +39,7 @@ async function create() {
 </script>
 
 <template>
-  <main id="main" class="sl">
+  <main id="main" class="sl workspace-page">
     <header class="head">
       <h1>材料规范官</h1>
       <p>收上来的材料乱七八糟？贴入比赛通知，导入名单，把整个文件夹拖进来：系统对照规范逐项检查、自动修正，最后按你的模板生成可直接交付的材料包。</p>
@@ -64,7 +64,7 @@ async function create() {
 </template>
 
 <style scoped>
-.sl { display: grid; gap: var(--sp-4); max-width: 1000px; margin: 0 auto; padding: var(--sp-6) var(--gutter) var(--sp-8); }
+.sl { display: grid; gap: var(--sp-4); }
 .head h1 { font-size: var(--fs-2xl); }
 .head p { margin-top: 6px; color: var(--text-2); font-size: var(--fs-sm); line-height: 1.7; max-width: 720px; }
 .new { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; padding: var(--sp-4) var(--sp-5); }

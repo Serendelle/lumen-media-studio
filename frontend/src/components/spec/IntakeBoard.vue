@@ -256,7 +256,7 @@ h2 { font-size: var(--fs-lg); }
 .warn { font-size: var(--fs-xs); color: var(--apricot-ink); }
 .err { color: var(--danger); font-size: var(--fs-sm); }
 .drop { display: grid; gap: 8px; justify-items: center; padding: var(--sp-6) var(--sp-4); border: 1.5px dashed var(--line-strong); border-radius: var(--r-md); text-align: center; background: var(--surface); }
-.drop.on { border-color: var(--mint-ink); background: rgba(217, 237, 228, 0.4); }
+.drop.on { border-color: var(--mint-ink); background: var(--accent-soft); }
 .drop span { font-size: var(--fs-xs); color: var(--text-2); max-width: 560px; line-height: 1.6; }
 .btns { display: flex; gap: 8px; }
 .queue { display: grid; gap: 2px; max-height: 220px; overflow: auto; margin: 0; padding: 0; list-style: none; font-size: var(--fs-xs); }

@@ -2,22 +2,17 @@ import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Link, useBridge } from './bridge'
 
-/** Lumen's mark: the brand's soft-light orb on a dark tile. */
+/** Shared glass L mark, also used by the Vue views and browser tab. */
 function Mark() {
   return (
-    <svg viewBox="0 0 32 32" aria-hidden="true" className="size-7 shrink-0">
-      <defs>
-        <radialGradient id="lumen-nav-g" cx="38%" cy="34%" r="72%">
-          <stop offset="0" stopColor="#F3E3D7" />
-          <stop offset=".55" stopColor="#D9EDE4" />
-          <stop offset="1" stopColor="#DCE8F0" />
-        </radialGradient>
-      </defs>
-      <rect width="32" height="32" rx="9" fill="#1a1a1a" />
-      <rect x=".5" y=".5" width="31" height="31" rx="8.5" fill="none" stroke="rgba(255,255,255,.12)" />
-      <circle cx="16" cy="16" r="8.5" fill="url(#lumen-nav-g)" />
-      <path d="M16 7.5v17" stroke="#1a1a1a" strokeWidth="1.3" opacity=".35" />
-    </svg>
+    <img
+      src="/favicon.svg?v=lumen-glass"
+      width={36}
+      height={36}
+      alt=""
+      aria-hidden="true"
+      className="size-9 shrink-0 object-contain"
+    />
   )
 }
 

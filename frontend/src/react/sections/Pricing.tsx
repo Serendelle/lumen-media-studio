@@ -35,7 +35,7 @@ export default function Pricing() {
       yearlyNote: `按年付费，相当于每月 ¥${(PLUS_YEARLY / 12).toFixed(2)}，省 ¥${YEARLY_SAVING}`,
       features: ['包含 Free 的全部功能', '智能模式：用一句话描述想要的结果', '四个 Agent 理解、规划、执行、审核', '执行前计划由你确认', '完成后自动质量审核'],
       buttonText: '升级 Plus',
-      href: isAuthenticated ? '/workspace/media?mode=ai' : '/register',
+      href: isAuthenticated ? '/workspace/ai' : '/register',
       isPopular: true,
     },
   ]

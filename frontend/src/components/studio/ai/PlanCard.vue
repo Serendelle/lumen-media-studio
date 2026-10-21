@@ -99,8 +99,8 @@ async function decide(approve: boolean) {
   border-radius: var(--r-lg);
 }
 .plan.live {
-  border-color: rgba(59, 115, 96, 0.4);
-  box-shadow: 0 0 0 4px rgba(217, 237, 228, 0.6), var(--shadow-2);
+  border-color: var(--line-strong);
+  box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow-2);
 }
 .head h3 {
   margin-top: 4px;

@@ -15,6 +15,31 @@ $Root = Split-Path -Parent $PSScriptRoot
 $script:Missing = 0
 $script:Warn = 0
 
+# Honor the same explicit tool paths as the backend, including project-local installs.
+$script:ToolPaths = @{}
+$toolKeys = @{
+    'ffmpeg' = 'FFMPEG_PATH'; 'ffprobe' = 'FFPROBE_PATH'; 'exiftool' = 'EXIFTOOL_PATH'
+    'magick' = 'MAGICK_PATH'; 'gswin64c' = 'GHOSTSCRIPT_PATH'; 'soffice.com' = 'SOFFICE_PATH'
+    'rembg' = 'REMBG_PATH'; 'ocr-python' = 'OCR_PYTHON'
+}
+$localConfig = @{}
+$configFile = Join-Path $Root '.env'
+if (Test-Path $configFile) {
+    foreach ($line in [System.IO.File]::ReadAllLines($configFile)) {
+        if ($line -match '^\s*([A-Z_]+)\s*=(.*)$' -and $toolKeys.ContainsValue($Matches[1])) {
+            $localConfig[$Matches[1]] = $Matches[2].Trim()
+        }
+    }
+}
+foreach ($tool in $toolKeys.Keys) {
+    $value = [Environment]::GetEnvironmentVariable($toolKeys[$tool])
+    if ([string]::IsNullOrWhiteSpace($value)) { $value = $localConfig[$toolKeys[$tool]] }
+    if (-not [string]::IsNullOrWhiteSpace($value)) {
+        if (-not [System.IO.Path]::IsPathRooted($value)) { $value = Join-Path $Root $value }
+        $script:ToolPaths[$tool] = $value
+    }
+}
+
 function Write-Row([string]$Name, [string]$Status, [string]$Detail, [string]$Level) {
     if ($Quiet -and $Level -eq 'ok') { return }
     $color = switch ($Level) { 'ok' { 'Green' } 'warn' { 'Yellow' } default { 'Red' } }
@@ -24,6 +49,11 @@ function Write-Row([string]$Name, [string]$Status, [string]$Detail, [string]$Lev
 }
 
 function Find-Exe([string]$Name, [string[]]$Fallbacks) {
+    if ($script:ToolPaths.ContainsKey($Name)) {
+        $configured = $script:ToolPaths[$Name]
+        if (Test-Path -LiteralPath $configured -PathType Leaf) { return $configured }
+        return $null
+    }
     $cmd = Get-Command $Name -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($cmd) { return $cmd.Source }
     foreach ($pattern in $Fallbacks) {
@@ -116,12 +146,13 @@ $browser = @('C:\Program Files\Google\Chrome\Application\chrome.exe', "$LocalApp
 if ($browser) { Write-Row 'Chrome / Edge' '可用' $browser 'ok' }
 else { Write-Row 'Chrome / Edge' '未找到（可选）' 'HTML 转 PDF 不可用' 'warn'; $script:Warn++ }
 
-$ocr = @('D:\LumenTools\ocr-venv\Scripts\python.exe', 'C:\LumenTools\ocr-venv\Scripts\python.exe', "$env:USERPROFILE\.lumen\ocr-venv\Scripts\python.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+$ocr = Find-Exe 'ocr-python' @('D:\LumenTools\ocr-venv\Scripts\python.exe', 'C:\LumenTools\ocr-venv\Scripts\python.exe', "$env:USERPROFILE\.lumen\ocr-venv\Scripts\python.exe")
 if ($ocr) { Write-Row 'RapidOCR' '可用' $ocr 'ok' }
 else { Write-Row 'RapidOCR' '未安装（可选）' '学习播放器无法识别画面文字；见 docs/deployment.md 第 10 节' 'warn'; $script:Warn++ }
 
-$rembg = $null
+$rembg = Find-Exe 'rembg' @()
 foreach ($base in @("$env:USERPROFILE\miniconda3", "$env:USERPROFILE\anaconda3", "$LocalAppData\miniconda3", 'C:\ProgramData\miniconda3')) {
+    if ($rembg) { break }
     $cand = Join-Path $base 'envs\rembg-env\Scripts\rembg.exe'
     if (Test-Path $cand) { $rembg = $cand; break }
 }

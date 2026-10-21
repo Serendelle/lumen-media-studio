@@ -15,7 +15,7 @@ const FpsMeter = defineAsyncComponent(() => import('@/components/common/FpsMeter
     so navigation never waits on a leave transition (which stalls when frames are throttled).
   -->
   <RouterView v-slot="{ Component, route }">
-    <div :key="route.name ?? route.path" class="route">
+    <div :key="route.matched[0]?.path === '/workspace' ? 'workspace' : route.name ?? route.path" class="route">
       <component :is="Component" />
     </div>
   </RouterView>

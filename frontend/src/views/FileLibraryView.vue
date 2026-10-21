@@ -115,7 +115,7 @@ async function download(f: FileView) {
 </script>
 
 <template>
-  <main id="main" class="lib">
+  <main id="main" class="lib workspace-page">
     <header class="head">
       <div>
         <h1>我的文件</h1>
@@ -203,9 +203,6 @@ async function download(f: FileView) {
 .lib {
   display: grid;
   gap: var(--sp-4);
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--sp-6) var(--gutter) var(--sp-8);
 }
 .head {
   display: flex;
