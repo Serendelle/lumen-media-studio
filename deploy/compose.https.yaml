@@ -1,0 +1,9 @@
+# Compose >= 2.24.4 is required for !override. The HTTP-only port list is replaced.
+services:
+  web:
+    ports: !override
+      - "${LUMEN_TLS_BIND_IP:-0.0.0.0}:80:8080"
+      - "${LUMEN_TLS_BIND_IP:-0.0.0.0}:443:8443"
+    volumes:
+      - ./deploy/nginx/https.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${LUMEN_TLS_DIR:-./data/deploy/tls}:/etc/nginx/tls:ro

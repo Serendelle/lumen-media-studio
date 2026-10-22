@@ -1,7 +1,16 @@
 # Prompt version registry. The active version is recorded on every conversation (ai_conversations.prompt_version)
 # so a result can always be traced back to the exact prompts that produced it.
-active: 1.5.0
+active: 1.6.0
 versions:
+  - version: 1.6.0
+    date: 2026-10-22
+    system: system.yaml@1.6.0
+    skills:
+      requirement-analyst: 1.4.0
+      task-planner: 1.4.0
+      media-executor: 1.1.0
+      quality-reviewer: 1.2.0
+    notes: 文档转换扩展至 docx/html/xlsx/ofd/pdf/png/jpg；区分页面嵌图与可编辑提取、明确无 OCR 和签名限制；按真实目标类型规划依赖并独立重读产物与图片 ZIP。
   - version: 1.5.0
     date: 2026-10-19
     system: system.yaml@1.5.0

@@ -6,6 +6,7 @@ import com.houqing.tools.video_compressor_backend.common.ApiException;
 import com.houqing.tools.video_compressor_backend.common.ErrorCode;
 import com.houqing.tools.video_compressor_backend.config.AppProperties;
 import com.houqing.tools.video_compressor_backend.media.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Files;
@@ -13,6 +14,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** AI background removal via the rembg CLI (first run downloads the model, so the timeout is generous). */
@@ -24,10 +26,14 @@ public class RemoveBackgroundHandler implements MediaTaskHandler {
     private final ProcessRunner runner;
     private final StorageService storage;
     private final ObjectMapper mapper;
+    private final Path modelDirectory;
 
     public RemoveBackgroundHandler(AppProperties props, ToolLocator tools, ProcessRunner runner,
-                                   StorageService storage, ObjectMapper mapper) {
+                                   StorageService storage, ObjectMapper mapper,
+                                   @Value("${app.tools.rembg-model-dir:}") String modelDirectory) {
         this.props = props; this.tools = tools; this.runner = runner; this.storage = storage; this.mapper = mapper;
+        this.modelDirectory = (modelDirectory == null || modelDirectory.isBlank()
+                ? props.dataRoot().resolve("models/rembg") : Path.of(modelDirectory)).toAbsolutePath().normalize();
     }
 
     @Override public String type() { return "image.removebg"; }
@@ -50,16 +56,22 @@ public class RemoveBackgroundHandler implements MediaTaskHandler {
         List<String> cmd = new ArrayList<>(tools.command(Tool.REMBG));
         cmd.add("i");
         String model = props.tools().rembgModel();
-        if (model != null && model.matches("[a-z0-9_-]{2,40}")) { cmd.add("-m"); cmd.add(model); }
+        if (model == null || !model.matches("[a-z0-9_-]{2,40}")) model = "u2net";
+        cmd.add("-m"); cmd.add(model);
         cmd.add(ctx.inputPath(in).toString());
         cmd.add(out.toString());
+        // rembg otherwise inherits XDG_DATA_HOME / the account's home directory, which
+        // may be read-only or outside this application's writable storage.
+        Files.createDirectories(modelDirectory);
         // model download + inference can be slow on first run
-        runner.runChecked(cmd, Duration.ofMinutes(Math.max(10, props.media().taskTimeoutMinutes())), ctx.token(), null);
+        runner.runChecked(cmd, Duration.ofMinutes(Math.max(10, props.media().taskTimeoutMinutes())), ctx.token(), null,
+                null, Map.of("U2NET_HOME", modelDirectory.toString(), "OMP_NUM_THREADS", "2"));
         ctx.progress(95, "saving");
 
         if (!Files.exists(out)) throw new ApiException(ErrorCode.PROCESS_FAILED, "AI 未能生成结果图像");
         var summary = mapper.createObjectNode();
         summary.put("outputSize", Files.size(out));
+        summary.put("model", model);
         String name = StorageService.baseName(in.getOriginalName()) + "_nobg.png";
         MediaFile mf = storage.registerOutput(ctx.ownerId(), out, name, MediaKind.IMAGE, "image/png", ctx.taskId());
         return new HandlerResult(mf, summary);

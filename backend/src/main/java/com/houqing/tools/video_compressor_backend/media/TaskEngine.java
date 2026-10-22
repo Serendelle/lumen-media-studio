@@ -112,7 +112,7 @@ public class TaskEngine {
 
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             var existing = repo.findByOwnerIdAndIdempotencyKey(ownerId, idempotencyKey);
-            if (existing.isPresent()) return existing.get();
+            if (existing.isPresent()) return reusableSubmission(existing.get());
         }
         for (Tool tool : h.requiredTools()) {
             if (!tools.available(tool)) {
@@ -151,7 +151,7 @@ public class TaskEngine {
             // only swallow it when the winning row really exists)
             if (t.getIdempotencyKey() != null) {
                 var winner = repo.findByOwnerIdAndIdempotencyKey(ownerId, t.getIdempotencyKey());
-                if (winner.isPresent()) return winner.get();
+                if (winner.isPresent()) return reusableSubmission(winner.get());
             }
             throw e;
         }
@@ -283,7 +283,8 @@ public class TaskEngine {
     }
 
     public TaskEntity retry(long ownerId, String taskId) {
-        TaskEntity t = require(ownerId, taskId);
+        TaskEntity t = repo.findByIdAndOwnerIdAndHistoryDeletedAtIsNull(taskId, ownerId)
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "任务不存在、已删除或无权访问"));
         if (!"FAILED".equals(t.getStatus()) && !"CANCELLED".equals(t.getStatus())) {
             throw new ApiException(ErrorCode.INVALID_TASK_STATE, "只有失败或已取消的任务可以重试");
         }
@@ -298,18 +299,13 @@ public class TaskEngine {
         List<MediaFile> inputs = inputIds.stream().map(id -> storage.require(ownerId, id)).toList();
 
         long now = System.currentTimeMillis();
-        t.setStatus("QUEUED");
-        t.setProgress(0);
-        t.setStage(null);
-        t.setErrorCode(null);
-        t.setMessage("任务已重新排队...");
-        t.setOutputFile(null);
-        t.setResultJson(null);
-        t.setAttempt(t.getAttempt() + 1);
-        t.setStartedAt(null);
-        t.setFinishedAt(null);
-        t.setUpdatedAt(now);
-        repo.save(t);
+        if (repo.requeueVisible(ownerId, taskId, t.getAttempt(), now) != 1) {
+            if (repo.findByIdAndOwnerIdAndHistoryDeletedAtIsNull(taskId, ownerId).isEmpty())
+                throw new ApiException(ErrorCode.NOT_FOUND, "任务不存在、已删除或无权访问");
+            throw new ApiException(ErrorCode.INVALID_TASK_STATE, "任务状态已变化，请刷新后重试");
+        }
+        t = repo.findByIdAndOwnerIdAndHistoryDeletedAtIsNull(taskId, ownerId)
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "任务不存在、已删除或无权访问"));
         enqueue(taskId, inputs);
         return t;
     }
@@ -383,6 +379,12 @@ public class TaskEngine {
     }
 
     // ---- helpers ----
+
+    private TaskEntity reusableSubmission(TaskEntity task) {
+        if (task.getHistoryDeletedAt() != null)
+            throw new ApiException(ErrorCode.NOT_FOUND, "先前任务记录已删除，请用新的请求重新提交");
+        return task;
+    }
 
     private String writeJson(JsonNode node) { return node == null ? "{}" : node.toString(); }
 

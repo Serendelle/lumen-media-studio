@@ -36,6 +36,10 @@ public class ExifToolRunner {
 
     /** Runs exiftool with the given arguments (one per line in the arg file); throws PROCESS_FAILED on error. */
     public String run(List<String> args, Path argDir, Duration timeout, CancellationToken token) {
+        return run(args, argDir, timeout, token, false);
+    }
+
+    private String run(List<String> args, Path argDir, Duration timeout, CancellationToken token, boolean jsonStdout) {
         Path argFile = argDir.resolve("exiftool-" + System.nanoTime() + ".args");
         try {
             List<String> lines = new ArrayList<>(args.size() + 2);
@@ -51,7 +55,9 @@ public class ExifToolRunner {
         cmd.add(argFile.toString());
         StringBuilder out = new StringBuilder();
         try {
-            ProcessRunner.Result r = runner.run(cmd, timeout, token, line -> out.append(line).append('\n'));
+            ProcessRunner.Result r = jsonStdout
+                    ? runner.runStdout(cmd, timeout, token, line -> out.append(line).append('\n'))
+                    : runner.run(cmd, timeout, token, line -> out.append(line).append('\n'));
             if (!r.ok()) {
                 log.warn("exiftool exited with {}: {}", r.exitCode(), r.tail());
                 throw new ApiException(ErrorCode.PROCESS_FAILED);
@@ -68,10 +74,14 @@ public class ExifToolRunner {
 
     /** Reads all tags as JSON (-G1 groups, numeric values). */
     public JsonNode readJson(Path file, Path argDir, CancellationToken token) {
-        String out = run(List.of("-json", "-G1", "-n", "-a", file.toString()), argDir, Duration.ofSeconds(60), token);
+        String out = run(List.of("-json", "-G1", "-n", "-a", "-charset", "UTF8", file.toString()),
+                argDir, Duration.ofSeconds(60), token, true);
         try {
             JsonNode arr = mapper.readTree(out);
-            return arr.isArray() && arr.size() > 0 ? arr.get(0) : mapper.createObjectNode();
+            if (arr == null || !arr.isArray() || arr.isEmpty() || !arr.get(0).isObject()) {
+                throw new ApiException(ErrorCode.MEDIA_UNREADABLE);
+            }
+            return arr.get(0);
         } catch (Exception e) {
             throw new ApiException(ErrorCode.MEDIA_UNREADABLE);
         }

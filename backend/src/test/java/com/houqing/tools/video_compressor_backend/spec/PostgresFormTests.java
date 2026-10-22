@@ -5,6 +5,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class PostgresFormTests extends FormTests {
     static final EmbeddedPostgres PG;
     static { try { PG = EmbeddedPostgres.builder().start(); } catch (Exception e) { throw new ExceptionInInitializerError(e); } }

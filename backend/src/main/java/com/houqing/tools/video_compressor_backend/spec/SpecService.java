@@ -34,16 +34,22 @@ public class SpecService {
     private final SpecChecker checker;
     private final TaskEngine engine;
     private final ObjectMapper mapper;
+    private final org.springframework.jdbc.core.JdbcTemplate db;
+    private final com.houqing.tools.video_compressor_backend.collaboration.ProjectAccessService collaboration;
 
     /** engine is lazy: TaskEngine collects every handler, and the delivery handler depends on this service. */
     public SpecService(SpecProjectRepository projects, SpecItemRepository items, StorageService storage,
-                       SpecChecker checker, @org.springframework.context.annotation.Lazy TaskEngine engine, ObjectMapper mapper) {
+                       SpecChecker checker, @org.springframework.context.annotation.Lazy TaskEngine engine, ObjectMapper mapper,
+                       org.springframework.jdbc.core.JdbcTemplate db,
+                       com.houqing.tools.video_compressor_backend.collaboration.ProjectAccessService collaboration) {
         this.projects = projects;
         this.items = items;
         this.storage = storage;
         this.checker = checker;
         this.engine = engine;
         this.mapper = mapper;
+        this.db = db;
+        this.collaboration = collaboration;
     }
 
     // ---------------- projects ----------------
@@ -66,7 +72,7 @@ public class SpecService {
         long now = System.currentTimeMillis();
         p.setCreatedAt(now);
         p.setUpdatedAt(now);
-        return projects.save(p);
+        return projects.saveAndFlush(p);
     }
 
     public SpecProject require(long uid, String id) {
@@ -95,8 +101,11 @@ public class SpecService {
         }
         release(uid, p.getDocxTemplateFileId());
         release(uid, p.getXlsxTemplateFileId());
+        List<String> sharedFiles = db.queryForList("select file_id from project_file_versions where project_id=?", String.class, id);
         items.deleteByProjectId(id);
         projects.delete(p);
+        projects.flush(); // Cascades release project references before ordinary library retention can resume.
+        for (String fileId : sharedFiles) release(uid, fileId);
     }
 
     // ---------------- spec ----------------
@@ -134,6 +143,8 @@ public class SpecService {
         p.setUpdatedAt(System.currentTimeMillis());
         projects.save(p);
         rematchAndRecheck(p, true);
+        db.update("update spec_projects set publication_status='DRAFT',team_version=team_version+1 where id=?",id);
+        collaboration.activity(collaboration.require(uid,id),"SPEC_UPDATED",null);
         return new SchemaReport(r.spec(), r.warnings(), p.getVersion());
     }
 

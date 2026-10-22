@@ -192,7 +192,12 @@ V2：批量处理时单张失败不会让整批失败。`result` 新增 `succeed
 | GET | `/{id}` | TaskView |
 | POST | `/{id}/cancel` | QUEUED 状态立即取消；RUNNING 状态结束整个进程树。已结束的任务返回 409 |
 | POST | `/{id}/retry` | 仅限 FAILED/CANCELLED 状态，`attempt + 1` |
+| DELETE | `/{id}` | 删除当前用户的一条已结束任务历史，返回 `{deletedCount, taskIds[]}` |
+| POST | `/history/delete` | `{taskIds[]}`，最多 200 条；仅允许已结束状态；批量校验失败整体回滚，返回 `{deletedCount, taskIds[]}` |
+| DELETE | `/history` | 清空当前用户全部分页中的已结束任务历史，返回 `{deletedCount, taskIds: [], clearedBefore}`，不影响进行中任务 |
 | GET | `/{id}/events` | SSE：先推送一次 `status` 快照，之后推送 `progress` / `status`；任务结束时关闭连接；每 15 秒发送一次心跳注释。断线重连或刷新页面后会重新获得当前状态 |
+
+历史删除仅影响个人列表、概览计数及普通任务查询；原件、处理结果、保留期限和 AI/项目审核引用不变。已删除任务的查询、事件订阅、取消、重试及原幂等键回放返回 404。尝试删除进行中任务返回 409。数据库使用 `history_deleted_at` 持久化个人历史状态，不级联删除项目任务或文件；重试与删除通过数据库条件更新竞争，防止记录在并发请求中重新出现。使用说明见 [任务历史管理](task-history.md)。
 
 ## 10. 系统
 

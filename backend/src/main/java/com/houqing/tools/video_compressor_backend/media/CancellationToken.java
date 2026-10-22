@@ -7,6 +7,11 @@ public class CancellationToken {
 
     public boolean isCancelled() { return cancelled; }
 
+    public void throwIfCancelled() {
+        if (cancelled) throw new com.houqing.tools.video_compressor_backend.common.ApiException(
+                com.houqing.tools.video_compressor_backend.common.ErrorCode.CANCELLED);
+    }
+
     public void cancel() {
         cancelled = true;
         Process p = current;

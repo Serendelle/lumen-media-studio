@@ -28,6 +28,7 @@ public final class Constraints {
     static final List<String> CONTAINERS = List.of("mp4", "mov", "webm", "mkv", "gif");
     static final List<String> AUDIO = List.of("mp3", "aac", "m4a", "wav", "flac");
     static final List<String> IMAGE = List.of("jpg", "png", "webp", "avif");
+    static final List<String> DOCUMENT = List.of("docx", "html", "xlsx", "ofd", "pdf", "png", "jpg");
 
     public static ObjectNode normalize(JsonNode in, ObjectMapper mapper) {
         ObjectNode out = mapper.createObjectNode();
@@ -56,7 +57,8 @@ public final class Constraints {
             if (!o.isEmpty()) out.set("image", o);
         }
         JsonNode d = in.path("document");
-        if (d.isObject() && "pdf".equals(lower(d.path("format")))) out.putObject("document").put("format", "pdf");
+        String documentFormat = lower(d.path("format")).replace("jpeg", "jpg");
+        if (d.isObject() && DOCUMENT.contains(documentFormat)) out.putObject("document").put("format", documentFormat);
         return out;
     }
 
@@ -80,7 +82,8 @@ public final class Constraints {
             if (im.has("maxBytes")) sb.append(" ≤ ").append(Math.round(im.path("maxBytes").asLong() / 1024.0)).append(" KB");
             sb.append("；");
         }
-        if (c.path("document").isObject()) sb.append("文档 PDF；");
+        if (c.path("document").isObject()) sb.append("文档 ")
+                .append(c.path("document").path("format").asText().toUpperCase(Locale.ROOT)).append("；");
         return sb.toString();
     }
 

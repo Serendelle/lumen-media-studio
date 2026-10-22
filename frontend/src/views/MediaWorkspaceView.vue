@@ -14,7 +14,7 @@ const TOOLS = [
   { id: 'audio', icon: 'audio', label: '音频提取', group: '音频', feature: 'audio.extract', comp: defineAsyncComponent(() => import('@/components/studio/tools/AudioTool.vue')) },
   { id: 'image', icon: 'image', label: '图片处理', group: '图片', feature: 'image.process', comp: defineAsyncComponent(() => import('@/components/studio/tools/ImageTool.vue')) },
   { id: 'removebg', icon: 'magic', label: 'AI 抠图', group: '图片', feature: 'image.removebg', comp: defineAsyncComponent(() => import('@/components/studio/tools/RemoveBgTool.vue')) },
-  { id: 'pdf', icon: 'pdf', label: 'PDF 转换', group: '文档', feature: 'pdf.process', comp: defineAsyncComponent(() => import('@/components/studio/tools/PdfTool.vue')) },
+  { id: 'pdf', icon: 'pdf', label: 'PDF / 文档转换', group: '文档', feature: 'document.convert', comp: defineAsyncComponent(() => import('@/components/studio/tools/PdfTool.vue')) },
   { id: 'metadata', icon: 'shield', label: '元数据与隐私', group: '隐私', feature: 'metadata.view', comp: defineAsyncComponent(() => import('@/components/studio/tools/MetadataTool.vue')) },
 ] as const
 

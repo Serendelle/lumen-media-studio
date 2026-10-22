@@ -8,6 +8,7 @@ import App from './App.vue'
 import router from './router'
 import { setUnauthorizedHandler } from './api/http'
 import { useAuthStore } from './stores/auth'
+import { useTasksStore } from './stores/tasks'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -18,6 +19,7 @@ app.use(router)
 setUnauthorizedHandler(() => {
   const auth = useAuthStore(pinia)
   if (!auth.isAuthenticated) return
+  useTasksStore(pinia).reset()
   auth.logout()
   const current = router.currentRoute.value
   if (current.meta.requiresAuth) void router.replace({ name: 'login', query: { redirect: current.fullPath, expired: '1' } })

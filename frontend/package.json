@@ -8,6 +8,9 @@
     "build": "vue-tsc -b && vite build",
     "typecheck": "vue-tsc -b",
     "test:forms": "node --test scripts/form-merge.test.mjs",
+    "test:collaboration": "node --test scripts/collaboration.test.mjs",
+    "test:conversion": "node --test scripts/conversion.test.mjs",
+    "test:history": "node --test scripts/task-history.test.mjs",
     "preview": "vite preview --port 4173",
     "predev": "node scripts/copy-pyodide.mjs",
     "prebuild": "node scripts/copy-pyodide.mjs"

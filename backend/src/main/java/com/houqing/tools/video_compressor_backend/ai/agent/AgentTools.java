@@ -127,7 +127,7 @@ public class AgentTools {
                 ci.putObject("format").put("type", "string").set("enum", strings("jpg", "png", "webp", "avif"));
                 ci.putObject("maxSizeKB").put("type", "number");
                 cp.putObject("document").put("type", "object").putObject("properties").putObject("format").put("type", "string")
-                        .set("enum", strings("pdf"));
+                        .set("enum", strings("docx", "html", "xlsx", "ofd", "pdf", "png", "jpg"));
                 required.add("understood").add("ready").add("requests");
             }
             case "submit_plan" -> {

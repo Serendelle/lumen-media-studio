@@ -242,7 +242,7 @@ class DocumentStudioTests extends ApiTestBase {
         JsonNode m = json(get("/api/v2/documents/matrix", u));
         assertThat(m.path("routes").toString()).contains("\"from\":\"docx\"", "\"from\":\"xlsx\"", "\"from\":\"html\"");
         String d = upOk(docx(null), "a.docx", u);
-        var r = postJson("/api/v2/documents/convert", Map.of("sourceFileId", d, "targetFormat", "xlsx"), u);
+        var r = postJson("/api/v2/documents/convert", Map.of("sourceFileId", d, "targetFormat", "exe"), u);
         assertThat(r.getResponse().getStatus()).isEqualTo(400);
         r = postJson("/api/v2/documents/convert", Map.of("sourceFileId", d, "targetFormat", "pdf", "options", Map.of("shell", "rm -rf /")), u);
         assertThat(json(r).path("message").asText()).contains("不支持的转换参数");

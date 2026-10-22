@@ -17,12 +17,14 @@
 | 视频 | 按目标体积压缩（两遍编码，提交前评估可行性）/ CRF / 指定码率；H.264 / H.265；分辨率、帧率、音频参数；格式转换（MP4/MOV/WebM/MKV/GIF）；图片水印 | FFmpeg |
 | 音频 | 从视频中提取 MP3 / AAC / M4A / WAV / FLAC，可设置码率、采样率、声道 | FFmpeg |
 | 图片 | 批量压缩（JPG/WebP/AVIF 可按目标体积压缩）、改尺寸、转格式；处理前后对比；AI 抠图 | ImageMagick · rembg |
-| 文档 | 多张图片合并为 PDF；PDF 转图片 | ImageMagick · Ghostscript |
+| PDF / 文档转换 | DOCX、XLSX、HTML、OFD、PDF、PNG、JPG 之间转换；多图排序合并；逐页图片 ZIP；PDF 提取可编辑文字或以页面图片保留外观 | PDFBox · Apache POI · ImageIO · 隔离 OFDRW · LibreOffice · Chromium |
 | 隐私 | 查看元数据、编辑标题/作者/拍摄时间/GPS（按格式的真实能力开放字段）；一键清除位置信息或全部元数据，并独立核验 | ExifTool · FFmpeg |
-| 文档工作台 | Word / Excel / 网页转 PDF，上传前校验文档结构，转换后核验 PDF | LibreOffice · Chromium · PDFBox |
+| 文档工作台 | 与「PDF / 文档转换」共用入口，检查源格式、转换模式、工具可用性与实际结果；原件保留 | 同上 |
 | 材料规范官 | 在线收集表、自定义字段；按个人/全员/指定成员协作；留言、附件、回收站；一键统计与 Excel 导出；AI 匹配材料并生成交付包 | DeepSeek · Apache POI · 上述引擎 |
+| 团队协作 | 共享项目、四种成员角色、腾讯文档安全链接与手动回传、文件版本及审核、待办、实时事件、事实检查与交付 ZIP | 原项目模型 · SSE · PostgreSQL / SQLite |
 | 学习播放器 | 教学视频 → 随播放生长的知识图谱；讲到代码时，代码出现在浏览器沙盒中，可以直接运行 | 阿里云百炼 · RapidOCR · DeepSeek · Pyodide · Monaco |
 | 智能模式 | 需求理解 → 任务规划 → **用户确认** → 执行 → 质量审核；过程实时可见，可断线续传 | DeepSeek |
+| 任务历史 | 单条、批量删除与清空已结束记录；刷新后保持删除状态，原件和结果文件保留 | 统一任务引擎 |
 
 ## 快速开始（Windows 10 / 11）
 
@@ -41,6 +43,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\start-windows.ps1
 ```
 
 启动脚本会按需安装前端 npm 依赖、下载 Maven 依赖并构建前后端，然后由同一个后端进程提供页面和 API。媒体处理工具需要预先安装；缺少可选工具时，对应功能会显示不可用。
+
+转换支持与限制见 [文档互转说明](docs/document-conversion.md)。Word / Excel 指 DOCX / XLSX；图片和 OFD 转 Word / Excel 使用页面图片，不提供 OCR。PDF 的可编辑模式提取真实文本层与表格线索，复杂排版可能变化。OFD 转换不保留数字签名效力。
 
 - 项目页面：<http://localhost:8080>
 - API 文档：<http://localhost:8080/swagger-ui.html>
@@ -90,6 +94,7 @@ DASHSCOPE_API_KEY=sk-your-key-here
 | 智能模式 | `/workspace/ai` |
 | 文档工作台 | `/workspace/documents` |
 | 材料规范官 | `/workspace/specs` |
+| 团队协作 | `/workspace/team` |
 | 材料收集页（免登录） | `/collect/<随机令牌>` |
 | 学习播放器 | `/workspace/learn` |
 | 我的文件 | `/workspace/files` |
@@ -117,6 +122,16 @@ DASHSCOPE_API_KEY=sk-your-key-here
 未设置在线字段时，链接继续使用原有的仅提交文件模式，散件仅负责人可见。单个附件最多 200MiB；每个收集链接累计最多 500 个文件、2GiB，删除文件不退回额度。每个项目最多累计 2000 条表格记录（含回收站），每条记录最多 200 条留言。链接可随时停止，重新生成后旧链接失效；完整链接仅在生成时显示，请及时保存。
 
 多人访问需要所有参与者能访问同一服务器。`localhost` 链接只适用于本机；请从可访问的局域网或 HTTPS 部署地址打开工作台后生成链接。真实 AI 调用使用你配置的服务商接口并按其规则计费。
+
+## 团队协作与腾讯文档
+
+进入 **团队协作**，可以直接使用已有材料项目，或创建新项目并邀请已注册账号。负责人管理成员、可见范围及发布；编辑成员维护文件、文档与待办；审核成员审阅实际文件版本；查看成员读取获准资料。项目角色不会自动开放匿名收集表里的私有记录，原收集表权限继续独立生效。
+
+腾讯文档采用 **关联官方链接 → 腾讯网页内共同编辑 → 导出 DOCX / XLSX / PDF → 回传为新版本** 的流程。LUMEN 不读取未导入的正文，不代管腾讯分享权限，也没有声称实现双向内容同步。项目内的文件、审核、任务和成员变化通过 SSE 更新；断线后重新读取数据库，在线状态仅代表当前 LUMEN 连接。
+
+文件上传记录真实类型、上传人、SHA-256 与版本。负责人和审核员可以审批版本，负责人再生成包含真实文件与校验清单的 ZIP；发布要求所有最新材料审核通过、待办完成。原件不覆盖，处理结果单独保存。AI 助手需单独勾选同意，发送当前可见的文件名称、实测指标和检查结果；文件正文、表格单元格及解析字段值留在本地。模型费用按配置的服务商规则计算。
+
+使用步骤、API、迁移和验收边界见 [V3 实施与验收记录](docs/v3-implementation.md)、[腾讯文档说明](docs/tencent-documents.md)。Ubuntu 24.04 / 腾讯云轻量服务器的 Compose、HTTPS、PostgreSQL 持久化与备份恢复见 [V3 云部署指南](docs/deployment-v3.md)。容器实际运行和两台设备的腾讯网页编辑需在对应环境完成验收，当前记录会区分已执行与未执行的检查。
 
 ## 技术栈
 

@@ -65,4 +65,8 @@ public class TaskEntity {
 
     @Column(name = "updated_at", nullable = false)
     private long updatedAt;
+
+    /** Personal history visibility only. A late worker save must never undo an explicit history deletion. */
+    @Column(name = "history_deleted_at", insertable = false, updatable = false)
+    private Long historyDeletedAt;
 }

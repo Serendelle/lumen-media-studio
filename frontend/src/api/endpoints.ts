@@ -3,6 +3,7 @@ import type {
   AuthResult,
   CompressionPlan,
   ConversionMatrix,
+  DocumentFormat,
   DocumentInspection,
   PdfPagePreview,
   MaterialSpec,
@@ -23,6 +24,7 @@ import type {
   Page,
   SystemCapabilities,
   TaskStatus,
+  TaskHistoryDeletion,
   TaskView,
   Ticket,
   UserView,
@@ -46,6 +48,10 @@ export const documentsApi = {
   convert: (sourceFileId: string, options: Record<string, unknown>) =>
     postJson<{ taskId: string; status: string; statusUrl: string }>(
       '/api/v2/documents/convert', { sourceFileId, targetFormat: 'pdf', options }, withKey()),
+  convertTo: (sourceFileIds: string[], targetFormat: DocumentFormat, options: Record<string, unknown>) =>
+    postJson<{ taskId: string; status: string; statusUrl: string }>(
+      '/api/v2/documents/convert',
+      { ...(sourceFileIds.length === 1 ? { sourceFileId: sourceFileIds[0] } : { sourceFileIds }), targetFormat, options }, withKey()),
 }
 
 const sp = (id: string) => `/api/v2/specs/${encodeURIComponent(id)}`
@@ -141,6 +147,9 @@ export const tasksApi = {
   get: (id: string) => getJson<TaskView>(`/api/tasks/${encodeURIComponent(id)}`),
   cancel: (id: string) => postJson<TaskView>(`/api/tasks/${encodeURIComponent(id)}/cancel`),
   retry: (id: string) => postJson<TaskView>(`/api/tasks/${encodeURIComponent(id)}/retry`),
+  remove: async (id: string) => (await http.delete<TaskHistoryDeletion>(`/api/tasks/${encodeURIComponent(id)}`)).data,
+  removeMany: (taskIds: string[]) => postJson<TaskHistoryDeletion>('/api/tasks/history/delete', { taskIds }),
+  clearHistory: async () => (await http.delete<TaskHistoryDeletion>('/api/tasks/history')).data,
 }
 
 type Created = { taskId: string; status: string }

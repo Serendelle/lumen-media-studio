@@ -29,13 +29,15 @@ public class StorageService {
     private final AppProperties props;
     private final FileTypeDetector detector;
     private final MediaFileRepository repo;
+    private final org.springframework.jdbc.core.JdbcTemplate db;
     private final Path storageRoot;
     private final Path workRoot;
 
-    public StorageService(AppProperties props, FileTypeDetector detector, MediaFileRepository repo) {
+    public StorageService(AppProperties props, FileTypeDetector detector, MediaFileRepository repo, org.springframework.jdbc.core.JdbcTemplate db) {
         this.props = props;
         this.detector = detector;
         this.repo = repo;
+        this.db = db;
         this.storageRoot = props.dataRoot().resolve("storage");
         this.workRoot = props.dataRoot().resolve("work");
     }
@@ -158,13 +160,16 @@ public class StorageService {
     public int purgeExpired() {
         long now = System.currentTimeMillis();
         List<MediaFile> expired = repo.findByExpiresAtLessThan(now);
+        int deleted = 0;
         for (MediaFile mf : expired) {
-            quietDelete(storageRoot.resolve(mf.getStoredName()));
-            deleteWorkDir("doc-preview-" + mf.getId());
+            if (shared(mf)) { keepUntil(mf, Long.MAX_VALUE); continue; }
             repo.delete(mf);
+            repo.flush(); // A concurrent project reference must fail before any bytes are removed.
+            deleteBytesAfterCommit(mf);
+            deleted++;
         }
-        if (!expired.isEmpty()) log.info("purged {} expired files", expired.size());
-        return expired.size();
+        if (deleted > 0) log.info("purged {} expired files", deleted);
+        return deleted;
     }
 
     /**
@@ -181,14 +186,31 @@ public class StorageService {
     /** Back to the default retention counted from now (used when a project lets go of a file). */
     @Transactional
     public void releaseRetention(MediaFile mf) {
+        if (shared(mf)) { keepUntil(mf, Long.MAX_VALUE); return; }
         mf.setExpiresAt(System.currentTimeMillis() + Duration.ofHours(Math.max(1, props.retentionHours())).toMillis());
         repo.save(mf);
     }
 
+    @Transactional
     public void deleteFile(MediaFile mf) {
-        quietDelete(storageRoot.resolve(mf.getStoredName()));
-        deleteWorkDir("doc-preview-" + mf.getId()); // rendered page previews of a PDF
+        // Never remove bytes before finding a restrictive FK: immutable shared history still needs this file.
+        if (shared(mf))
+            throw new ApiException(ErrorCode.INVALID_TASK_STATE, "该文件属于项目版本历史，不能从个人文件库删除");
         repo.delete(mf);
+        repo.flush();
+        deleteBytesAfterCommit(mf);
+    }
+
+    private void deleteBytesAfterCommit(MediaFile mf) {
+        Runnable cleanup = () -> { quietDelete(storageRoot.resolve(mf.getStoredName())); deleteWorkDir("doc-preview-" + mf.getId()); };
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() { @Override public void afterCommit() { cleanup.run(); } });
+        } else cleanup.run();
+    }
+
+    private boolean shared(MediaFile mf) {
+        return db.queryForObject("select count(*) from project_file_versions where file_id=?", Integer.class, mf.getId()) > 0;
     }
 
     public long usableSpaceMb() {

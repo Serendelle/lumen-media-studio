@@ -90,6 +90,12 @@ async function act(fn: () => Promise<unknown>, okText?: string) {
     acting.value = false
   }
 }
+
+function removeHistory() {
+  if (!isTerminal(props.task) || acting.value) return
+  if (!window.confirm('删除这条历史记录？原文件和处理结果仍保留在文件库，进行中的任务不受影响。')) return
+  void act(() => tasks.remove(props.task.taskId), '历史记录已删除')
+}
 </script>
 
 <template>
@@ -141,6 +147,9 @@ async function act(fn: () => Promise<unknown>, okText?: string) {
                 :title="task.errorCode === 'TARGET_UNREACHABLE' ? '参数本身无法实现，请调整后重新提交' : ''"
                 @click="act(() => tasks.retry(task.taskId), '已重新排队')">
           <Icon name="retry" :size="13" />重试
+        </button>
+        <button v-if="isTerminal(task)" type="button" class="act act--danger" :disabled="acting" @click="removeHistory">
+          <Icon name="trash" :size="13" />删除记录
         </button>
       </div>
     </div>

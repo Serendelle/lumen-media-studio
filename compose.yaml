@@ -1,0 +1,128 @@
+name: ${COMPOSE_PROJECT_NAME:-lumen}
+
+x-log: &bounded-logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lumen
+      POSTGRES_USER: lumen
+      POSTGRES_PASSWORD: ${LUMEN_DB_PASSWORD:?Run python3 deploy/init-config.py first}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    command: ["postgres", "-c", "shared_buffers=256MB", "-c", "max_connections=40", "-c", "work_mem=8MB"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [database]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    cpus: "0.75"
+    mem_limit: 1g
+    pids_limit: 200
+    security_opt: [no-new-privileges:true]
+    logging: *bounded-logs
+    # Deliberately no host ports: only the api service joins this internal network.
+
+  api:
+    image: lumen-api:${LUMEN_RELEASE:-local}
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8080"
+      SERVER_FORWARD_HEADERS_STRATEGY: native
+      LUMEN_DB_URL: jdbc:postgresql://db:5432/lumen
+      LUMEN_DB_USER: lumen
+      LUMEN_DB_PASSWORD: ${LUMEN_DB_PASSWORD:?Database password is required}
+      LUMEN_DB_POOL_SIZE: "8"
+      APP_JWT_SECRET: ${APP_JWT_SECRET:?JWT secret is required}
+      APP_JWT_TTL_HOURS: ${APP_JWT_TTL_HOURS:-72}
+      APP_ALLOW_REGISTRATION: ${APP_ALLOW_REGISTRATION:-false}
+      APP_CORS_ORIGINS: ${LUMEN_PUBLIC_ORIGIN:?Public origin is required}
+      APP_DATA_DIR: /data
+      APP_RETENTION_HOURS: ${APP_RETENTION_HOURS:-168}
+      APP_MAX_UPLOAD_MB: ${APP_MAX_UPLOAD_MB:-1024}
+      APP_MEDIA_CONCURRENCY: ${APP_MEDIA_CONCURRENCY:-1}
+      APP_MEDIA_QUEUE: ${APP_MEDIA_QUEUE:-20}
+      APP_USER_ACTIVE_LIMIT: ${APP_USER_ACTIVE_LIMIT:-3}
+      APP_FFMPEG_THREADS: ${APP_FFMPEG_THREADS:-2}
+      APP_TASK_TIMEOUT_MIN: ${APP_TASK_TIMEOUT_MIN:-30}
+      APP_MIN_FREE_DISK_MB: ${APP_MIN_FREE_DISK_MB:-10240}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}
+      DEEPSEEK_PROXY: ${DEEPSEEK_PROXY:-}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      DASHSCOPE_ASR_MODEL: ${DASHSCOPE_ASR_MODEL:-paraformer-v2}
+      JAVA_TOOL_OPTIONS: -Xms256m -Xmx1536m -XX:MaxMetaspaceSize=384m -XX:ActiveProcessorCount=3 -Djava.awt.headless=true
+    volumes:
+      - application-data:/data
+    networks: [database, edge]
+    read_only: true
+    tmpfs:
+      - /tmp:size=536870912,mode=1777
+    shm_size: 256m
+    cpus: "3.0"
+    mem_limit: 5g
+    pids_limit: 512
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 40s
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "5", "--output", "/dev/null", "http://127.0.0.1:8080/actuator/health"]
+      interval: 20s
+      timeout: 6s
+      retries: 6
+      start_period: 90s
+    logging: *bounded-logs
+
+  web:
+    image: lumen-web:${LUMEN_RELEASE:-local}
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${LUMEN_BIND_IP:-127.0.0.1}:${LUMEN_HTTP_PORT:-8080}:8080"
+    networks: [edge]
+    read_only: true
+    tmpfs:
+      - /tmp:size=67108864,mode=1777
+    cpus: "0.25"
+    mem_limit: 256m
+    pids_limit: 100
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    logging: *bounded-logs
+
+volumes:
+  postgres-data:
+  application-data:
+
+networks:
+  database:
+    internal: true
+  edge:

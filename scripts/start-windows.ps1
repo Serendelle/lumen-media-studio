@@ -97,6 +97,16 @@ if ($Rebuild -or -not (Test-Path $jar)) {
     } finally { Pop-Location }
 } else { Write-Host '后端已构建，跳过（需要重新构建请加 -Rebuild）。' }
 
+$ofdWorkerJar = Join-Path $Root 'backend\ofd-worker\target\lumen-ofd-worker.jar'
+if ($Rebuild -or -not (Test-Path $ofdWorkerJar) -or -not (Test-Path (Join-Path $Root 'backend\ofd-worker\target\lib\ujmp-core-0.3.0.jar'))) {
+    Step '构建 OFD 转换组件（首次需要下载依赖）'
+    Push-Location (Join-Path $Root 'backend\ofd-worker')
+    try {
+        & ..\mvnw.cmd -q -B -DskipTests package
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $ofdWorkerJar)) { Fail 'OFD 组件构建失败（需要能访问 Maven 中央仓库）' }
+    } finally { Pop-Location }
+} else { Write-Host 'OFD 组件已构建，跳过（需要重新构建请加 -Rebuild）。' }
+
 # ---------------------------------------------------------------- 4. start
 Step "启动服务（端口 $Port）"
 if (Test-Path $PidFile) {

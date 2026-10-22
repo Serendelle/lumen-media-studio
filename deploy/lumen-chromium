@@ -1,0 +1,5 @@
+#!/bin/sh
+# Chromium's inner sandbox cannot start under this container's dropped capabilities
+# and no-new-privileges policy. The API container remains non-root and isolated.
+# The existing HTML converter also sanitizes scripts/URLs and blocks network access.
+exec /usr/bin/chromium --no-sandbox --disable-dev-shm-usage "$@"

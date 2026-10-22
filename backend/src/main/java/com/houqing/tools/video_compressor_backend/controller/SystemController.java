@@ -49,6 +49,7 @@ public class SystemController {
         features.put("metadata.view", tools.available(Tool.EXIFTOOL));
         features.put("metadata.modify", tools.available(Tool.EXIFTOOL) && ff);
         features.put("document.convert.office", tools.available(Tool.SOFFICE));
+        features.put("document.convert", true);
         features.put("document.convert.html", tools.available(Tool.CHROMIUM));
         features.put("document.inspect", true);
         features.put("metadata.scrub", tools.available(Tool.EXIFTOOL) && ff);

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.lumen</groupId>
+    <artifactId>lumen-ofd-worker</artifactId>
+    <version>1.0.0</version>
+    <name>Lumen isolated OFD converter</name>
+    <description>OFD raster bridge, isolated from the application's PDFBox 3 classpath.</description>
+    <properties>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.ofdrw</groupId><artifactId>ofdrw-converter</artifactId><version>2.4.0</version>
+            <exclusions>
+                <!-- These exporters are unused; keep iText's AGPL/commercial libraries out of the distribution. -->
+                <exclusion><groupId>com.itextpdf</groupId><artifactId>kernel</artifactId></exclusion>
+                <exclusion><groupId>com.itextpdf</groupId><artifactId>layout</artifactId></exclusion>
+                <exclusion><groupId>com.itextpdf</groupId><artifactId>font-asian</artifactId></exclusion>
+                <exclusion><groupId>org.json</groupId><artifactId>json</artifactId></exclusion>
+            </exclusions>
+        </dependency>
+        <dependency><groupId>org.apache.pdfbox</groupId><artifactId>pdfbox</artifactId><version>2.0.33</version></dependency>
+        <dependency><groupId>org.apache.pdfbox</groupId><artifactId>fontbox</artifactId><version>2.0.33</version></dependency>
+        <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-simple</artifactId><version>2.0.17</version></dependency>
+        <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.12.2</version><scope>test</scope></dependency>
+    </dependencies>
+    <build>
+        <finalName>lumen-ofd-worker</finalName>
+        <plugins>
+            <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.0</version></plugin>
+            <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.5.3</version></plugin>
+            <!-- LGPL library remains a separate replaceable JAR, never merged into application classes. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId><artifactId>maven-dependency-plugin</artifactId><version>3.8.1</version>
+                <executions><execution><id>replaceable-matrix-library</id><phase>package</phase><goals><goal>copy</goal></goals><configuration>
+                    <artifactItems>
+                        <artifactItem><groupId>org.ujmp</groupId><artifactId>ujmp-core</artifactId><version>0.3.0</version><type>jar</type><outputDirectory>${project.build.directory}/lib</outputDirectory></artifactItem>
+                        <artifactItem><groupId>org.ujmp</groupId><artifactId>ujmp-core</artifactId><version>0.3.0</version><type>jar</type><classifier>sources</classifier><outputDirectory>${project.build.directory}/lib</outputDirectory></artifactItem>
+                    </artifactItems>
+                </configuration></execution></executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId><artifactId>maven-shade-plugin</artifactId><version>3.6.0</version>
+                <executions><execution><phase>package</phase><goals><goal>shade</goal></goals><configuration>
+                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                    <artifactSet><excludes><exclude>org.ujmp:ujmp-core</exclude></excludes></artifactSet>
+                    <filters>
+                        <filter><artifact>*:*</artifact><excludes><exclude>META-INF/*.SF</exclude><exclude>META-INF/*.DSA</exclude><exclude>META-INF/*.RSA</exclude><exclude>module-info.class</exclude><exclude>META-INF/versions/*/module-info.class</exclude><exclude>com/itextpdf/**</exclude></excludes></filter>
+                        <filter><artifact>org.ofdrw:ofdrw-converter</artifact><excludes>
+                            <exclude>org/ofdrw/converter/utils/CommonUtil.class</exclude>
+                            <exclude>org/ofdrw/converter/FontLoader.class</exclude>
+                            <exclude>org/ofdrw/converter/ItextMaker*.class</exclude>
+                            <exclude>org/ofdrw/converter/ColorConvert.class</exclude>
+                            <exclude>org/ofdrw/converter/export/PDFExporterIText*.class</exclude>
+                        </excludes></filter>
+                    </filters>
+                    <transformers>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer"><resource>META-INF/LICENSE</resource></transformer>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer"><resource>META-INF/LICENSE.txt</resource></transformer>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer"><resource>META-INF/NOTICE</resource></transformer>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer"><resource>META-INF/NOTICE.txt</resource></transformer>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"><mainClass>com.lumen.ofdworker.OfdWorker</mainClass><manifestEntries><Class-Path>lib/ujmp-core-0.3.0.jar</Class-Path></manifestEntries></transformer>
+                    </transformers>
+                </configuration></execution></executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

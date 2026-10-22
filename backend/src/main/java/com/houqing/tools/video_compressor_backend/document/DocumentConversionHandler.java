@@ -19,13 +19,9 @@ import java.time.Duration;
 import java.util.*;
 
 /**
- * document.convert — the explicit P0 routes only: DOCX → PDF and XLSX → PDF (LibreOffice headless) and HTML → PDF
- * (Chromium headless). Each run gets its own LibreOffice / browser profile in the task's work dir, a hard 120 s
- * limit, and the user's file is only ever read (inputs are copied first). The PDF is then checked independently:
- * header, page count, and first/last page actually rendering.
- *
- * Params: {targetFormat: "pdf", options: {pageSize: A4|ORIGINAL, orientation: PORTRAIT|LANDSCAPE, marginMm: 0..30,
- * sheetNames: [..]}} — page options apply to HTML; Office files keep their own page setup; sheetNames is XLSX-only.
+ * Unified document.convert handler; retains the isolated Office/HTML PDF bridge for page rendering.
+ * Every external engine receives a work-directory copy. HTML page setup and Excel sheet selection are
+ * validated before queueing. Other concrete format routes and output checks live in UniversalConversionService.
  */
 @Component
 public class DocumentConversionHandler implements MediaTaskHandler {
@@ -37,14 +33,16 @@ public class DocumentConversionHandler implements MediaTaskHandler {
     private final StorageService storage;
     private final DocumentInspectionService inspection;
     private final ObjectMapper mapper;
+    private final UniversalConversionService universal;
 
     public DocumentConversionHandler(ToolLocator tools, ProcessRunner runner, StorageService storage,
-                                     DocumentInspectionService inspection, ObjectMapper mapper) {
+                                     DocumentInspectionService inspection, ObjectMapper mapper, UniversalConversionService universal) {
         this.tools = tools;
         this.runner = runner;
         this.storage = storage;
         this.inspection = inspection;
         this.mapper = mapper;
+        this.universal = universal;
     }
 
     @Override public String type() { return "document.convert"; }
@@ -53,6 +51,17 @@ public class DocumentConversionHandler implements MediaTaskHandler {
 
     @Override
     public void validate(JsonNode p, List<MediaFile> inputs) {
+        universal.validate(p, inputs);
+        String from = UniversalConversionService.source(inputs.get(0));
+        if (!UniversalConversionService.needsLegacyPdf(from, UniversalConversionService.target(p), UniversalConversionService.mode(from, p))) return;
+        ObjectNode legacy = p.deepCopy();
+        legacy.put("targetFormat", "pdf");
+        ObjectNode options = legacy.path("options").isObject() ? (ObjectNode)legacy.path("options") : mapper.createObjectNode();
+        options.remove(List.of("mode", "density")); legacy.set("options", options);
+        validateLegacy(legacy, inputs);
+    }
+
+    private void validateLegacy(JsonNode p, List<MediaFile> inputs) {
         if (inputs.size() != 1) throw new ApiException(ErrorCode.VALIDATION_FAILED, "需要且仅需要一个文档");
         MediaFile in = inputs.get(0);
         if (in.kind() == MediaKind.PDF) {
@@ -104,6 +113,10 @@ public class DocumentConversionHandler implements MediaTaskHandler {
         if (!names.isArray() || names.isEmpty() || names.size() > 50) {
             throw new ApiException(ErrorCode.VALIDATION_FAILED, "sheetNames 需为 1-50 个工作表名称");
         }
+        for (JsonNode name : names) if (!name.isTextual() || name.asText().isBlank())
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "工作表名称必须是非空文字");
+        // A planned prior step has no file yet. TaskEngine validates again with the real output on submission.
+        if (in.getId() != null && in.getId().startsWith("virtual:")) return;
         Set<String> existing = new HashSet<>();
         try (InputStream is = Files.newInputStream(storage.pathOf(in)); XSSFWorkbook wb = new XSSFWorkbook(is)) {
             for (int i = 0; i < wb.getNumberOfSheets(); i++) existing.add(wb.getSheetName(i));
@@ -122,6 +135,10 @@ public class DocumentConversionHandler implements MediaTaskHandler {
 
     @Override
     public HandlerResult execute(TaskContext ctx) throws Exception {
+        return universal.execute(ctx, () -> producePdf(ctx));
+    }
+
+    private UniversalConversionService.PreparedPdf producePdf(TaskContext ctx) throws Exception {
         MediaFile in = ctx.inputs().get(0);
         DocumentInspectionService.Format fmt = DocumentInspectionService.formatOf(in);
         JsonNode o = ctx.params().path("options");
@@ -153,14 +170,12 @@ public class DocumentConversionHandler implements MediaTaskHandler {
             pdf = office(ctx, source, outDir);
         }
 
-        ctx.progress(85, "verifying");
+        ctx.progress(24, "核验中间页面");
         MediaVerifier.Verification v = verify(pdf, summary, warnings);
         summary.set("verification", v.toJson());
         v.throwIfFailed();
 
-        String name = StorageService.baseName(in.getOriginalName()) + ".pdf";
-        MediaFile out = storage.registerOutput(ctx.ownerId(), pdf, name, MediaKind.PDF, "application/pdf", ctx.taskId());
-        return new HandlerResult(out, summary);
+        return new UniversalConversionService.PreparedPdf(pdf, summary);
     }
 
     /** Hides every sheet not chosen (LibreOffice exports only visible sheets) on a copy; the original is untouched. */

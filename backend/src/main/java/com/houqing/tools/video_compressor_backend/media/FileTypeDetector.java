@@ -123,6 +123,11 @@ public class FileTypeDetector {
      * is checked entry by entry, and HTML must be a single UTF-8 file. Returns null when the bytes are not a document.
      */
     Detected detectDocument(Path file, String mime, String ext) {
+        if (ext.equals("ofd")) {
+            sizeAtMost(file, 100L * 1024 * 1024, "OFD 文件不能超过 100MB");
+            com.houqing.tools.video_compressor_backend.document.OfdSafety.validate(file);
+            return new Detected(MediaKind.DOCUMENT, "application/ofd", "ofd");
+        }
         boolean officeExt = java.util.Set.of("docx", "xlsx", "docm", "xlsm", "dotm", "xltm").contains(ext);
         if (ZIP_MIMES.contains(mime) && officeExt) {
             sizeAtMost(file, MAX_OFFICE_BYTES, "Word / Excel 文档不能超过 30MB");

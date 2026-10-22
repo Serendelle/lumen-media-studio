@@ -18,6 +18,8 @@ logs/
 *.log
 
 # ---- build output ----
+__pycache__/
+*.py[cod]
 target/
 backend/target/
 node_modules/

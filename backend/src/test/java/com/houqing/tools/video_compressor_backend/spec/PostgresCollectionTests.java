@@ -6,6 +6,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 /** Run the same privacy, concurrency, cleanup and AI validation contract against real PostgreSQL migrations. */
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class PostgresCollectionTests extends CollectionTests {
     static final EmbeddedPostgres PG;
     static {

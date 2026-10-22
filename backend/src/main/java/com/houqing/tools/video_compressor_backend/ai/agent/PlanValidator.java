@@ -164,7 +164,15 @@ public class PlanValidator {
             case "image.removebg" -> new String[]{"IMAGE", "png"};
             case "image.process" -> inputs.size() > 1 ? new String[]{"ARCHIVE", "zip"}
                     : new String[]{"IMAGE", com.houqing.tools.video_compressor_backend.media.handler.ImageProcessHandlerAccess.outputExt(p, first)};
-            case "document.convert" -> new String[]{"PDF", "pdf"};
+            case "document.convert" -> {
+                String target = com.houqing.tools.video_compressor_backend.document.UniversalConversionService.target(p);
+                if (target.equals("pdf")) yield new String[]{"PDF", target};
+                if (target.equals("png") || target.equals("jpg")) {
+                    yield inputs.size() == 1 && first.kind() == MediaKind.IMAGE
+                            ? new String[]{"IMAGE", target} : new String[]{"ARCHIVE", "zip"};
+                }
+                yield new String[]{"DOCUMENT", target};
+            }
             case "pdf.process" -> "images-to-pdf".equals(p.path("tool").asText()) ? new String[]{"PDF", "pdf"} : new String[]{"ARCHIVE", "zip"};
             default -> new String[]{first.getMediaType(), StorageService.extensionOf(first.getStoredName())};
         };

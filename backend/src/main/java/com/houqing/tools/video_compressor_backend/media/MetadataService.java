@@ -1,15 +1,12 @@
 package com.houqing.tools.video_compressor_backend.media;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.houqing.tools.video_compressor_backend.common.ApiException;
 import com.houqing.tools.video_compressor_backend.common.ErrorCode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.houqing.tools.video_compressor_backend.config.AppProperties;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.*;
 
 /**
@@ -18,40 +15,29 @@ import java.util.*;
  */
 @Service
 public class MetadataService {
-    private static final Logger log = LoggerFactory.getLogger(MetadataService.class);
-
     private static final List<String> SENSITIVE_HINTS = List.of(
             "gps", "serial", "owner", "author", "creator", "artist", "location",
             "cameraserial", "lensserialnumber", "hostcomputer", "software");
 
-    private final ToolLocator tools;
-    private final ProcessRunner runner;
+    private final ExifToolRunner exif;
     private final StorageService storage;
-    private final ObjectMapper mapper;
+    private final Path argDir;
 
-    public MetadataService(ToolLocator tools, ProcessRunner runner, StorageService storage, ObjectMapper mapper) {
-        this.tools = tools; this.runner = runner; this.storage = storage; this.mapper = mapper;
+    public MetadataService(ExifToolRunner exif, StorageService storage, AppProperties props) {
+        this.exif = exif; this.storage = storage; this.argDir = props.dataRoot().resolve("tmp");
     }
 
     public Map<String, Object> view(long ownerId, String fileId) {
         MediaFile mf = storage.require(ownerId, fileId);
         Path path = storage.pathOf(mf);
 
-        List<String> cmd = new ArrayList<>(tools.command(Tool.EXIFTOOL));
-        cmd.addAll(List.of("-json", "-G1", "-n", "-a", "-charset", "filename=UTF8", "-charset", "UTF8", path.toString()));
-        StringBuilder out = new StringBuilder();
-        ProcessRunner.Result r = runner.run(cmd, Duration.ofSeconds(60), null, line -> out.append(line).append('\n'));
-        if (!r.ok()) {
-            log.warn("exiftool failed ({}): {}", r.exitCode(), r.tail());
-            throw new ApiException(ErrorCode.MEDIA_UNREADABLE);
+        JsonNode node;
+        try { node = exif.readJson(path, argDir, null); }
+        catch (ApiException e) {
+            // Preserve the metadata-view contract while writers retain their PROCESS_FAILED status.
+            if (e.getCode() == ErrorCode.PROCESS_FAILED) throw new ApiException(ErrorCode.MEDIA_UNREADABLE);
+            throw e;
         }
-        JsonNode arr;
-        try {
-            arr = mapper.readTree(out.toString());
-        } catch (Exception e) {
-            throw new ApiException(ErrorCode.MEDIA_UNREADABLE);
-        }
-        JsonNode node = arr.isArray() && arr.size() > 0 ? arr.get(0) : mapper.createObjectNode();
 
         Map<String, Map<String, Object>> groups = new LinkedHashMap<>();
         List<String> sensitive = new ArrayList<>();

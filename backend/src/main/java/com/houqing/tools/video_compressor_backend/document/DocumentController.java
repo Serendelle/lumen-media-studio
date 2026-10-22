@@ -46,7 +46,7 @@ public class DocumentController {
         this.mapper = mapper;
     }
 
-    public record ConvertRequest(@NotBlank String sourceFileId, @NotBlank String targetFormat, JsonNode options) {}
+    public record ConvertRequest(String sourceFileId, List<String> sourceFileIds, @NotBlank String targetFormat, JsonNode options) {}
 
     @PostMapping("/convert")
     public ResponseEntity<Map<String, Object>> convert(@Valid @RequestBody ConvertRequest req,
@@ -54,7 +54,13 @@ public class DocumentController {
         ObjectNode params = mapper.createObjectNode();
         params.put("targetFormat", req.targetFormat());
         params.set("options", req.options() == null || req.options().isNull() ? mapper.createObjectNode() : req.options());
-        TaskEntity t = engine.submit(CurrentUser.id(), "document.convert", params, List.of(req.sourceFileId()), "PRO", key);
+        List<String> ids = req.sourceFileIds();
+        if (ids == null || ids.isEmpty()) ids = req.sourceFileId() == null ? List.of() : List.of(req.sourceFileId());
+        else if (req.sourceFileId() != null && (!ids.equals(List.of(req.sourceFileId()))))
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "请使用 sourceFileId 或 sourceFileIds 指定文件，不要同时提交两组不同文件");
+        if (ids.isEmpty() || ids.size() > 100 || ids.stream().anyMatch(id -> id == null || id.isBlank()) || new java.util.HashSet<>(ids).size() != ids.size())
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "请选择 1-100 个不同的文件");
+        TaskEntity t = engine.submit(CurrentUser.id(), "document.convert", params, ids, "PRO", key);
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(Map.of("taskId", t.getId(), "status", t.getStatus(), "statusUrl", "/api/tasks/" + t.getId()));
     }

@@ -8,6 +8,9 @@ import { useTasksStore } from '@/stores/tasks'
 /** Right-hand task panel: bordered, collapsible groups of compact rows. */
 const tasks = useTasksStore()
 const previewing = ref<TaskView | null>(null)
+watch(() => tasks.historyRevision, () => {
+  if (previewing.value && !tasks.isHistoryVisible(previewing.value)) previewing.value = null
+})
 
 const KEY = 'lumen.tray-collapsed'
 const collapsed = reactive<Record<string, boolean>>({})

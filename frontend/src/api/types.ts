@@ -88,6 +88,13 @@ export interface TaskView {
   inputs?: { fileId: string; filename?: string; mediaType?: MediaKind }[]
 }
 
+export interface TaskHistoryDeletion {
+  deletedCount: number
+  taskIds: string[]
+  /** Server cutoff for clearing terminal history; tasks finished later remain visible. */
+  clearedBefore?: number
+}
+
 export interface WorkspaceSummary {
   tasksByStatus: Record<TaskStatus, number>
   inputs: { count: number; bytes: number }
@@ -198,11 +205,22 @@ export interface ConversionRoute {
   engine: string
   available: boolean
   taskType: string
+  description?: string
+  reason?: string
+  modes?: ConversionMode[]
+  defaultMode?: ConversionMode
+  outputKind?: MediaKind
 }
+
+export type DocumentFormat = 'docx' | 'xlsx' | 'html' | 'ofd' | 'pdf' | 'png' | 'jpg'
+export type ConversionMode = 'layout' | 'editable'
 
 export interface ConversionMatrix {
   routes: ConversionRoute[]
   notSupported: string[]
+  maxInputs?: number
+  maxRenderPages?: number
+  maxTotalBytes?: number
 }
 
 /** GET /api/v2/documents/{id}/inspect — fields depend on the format. */
@@ -210,7 +228,7 @@ export interface DocumentInspection {
   fileId: string
   filename: string
   kind: MediaKind
-  format: 'docx' | 'xlsx' | 'html' | 'pdf'
+  format: DocumentFormat
   sizeBytes: number
   warnings: string[]
   paragraphs?: number

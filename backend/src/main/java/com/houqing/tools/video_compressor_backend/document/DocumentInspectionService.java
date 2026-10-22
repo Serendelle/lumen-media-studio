@@ -42,16 +42,21 @@ public class DocumentInspectionService {
         this.mapper = mapper;
     }
 
-    public enum Format { DOCX, XLSX, HTML, PDF }
+    public enum Format { DOCX, XLSX, HTML, PDF, OFD, PNG, JPG }
 
     public static Format formatOf(MediaFile f) {
         String ext = StorageService.extensionOf(f.getStoredName());
         if (f.kind() == MediaKind.PDF) return Format.PDF;
+        if (f.kind() == MediaKind.IMAGE) {
+            if (ext.equals("png")) return Format.PNG;
+            if (ext.equals("jpg") || ext.equals("jpeg")) return Format.JPG;
+        }
         if (f.kind() != MediaKind.DOCUMENT) throw new ApiException(ErrorCode.UNSUPPORTED_DOCUMENT, "该文件不是文档");
         return switch (ext) {
             case "docx" -> Format.DOCX;
             case "xlsx" -> Format.XLSX;
             case "html" -> Format.HTML;
+            case "ofd" -> Format.OFD;
             default -> throw new ApiException(ErrorCode.UNSUPPORTED_DOCUMENT);
         };
     }
@@ -71,6 +76,17 @@ public class DocumentInspectionService {
             case XLSX -> xlsx(path, n, warnings);
             case HTML -> html(path, n, warnings);
             case PDF -> pdf(path, n, warnings);
+            case OFD -> {
+                n.put("pages", OfdSafety.validate(path));
+                warnings.add("OFD 转换后不保留数字签名的验证效力；按页预览请先转换为 PDF");
+            }
+            case PNG, JPG -> {
+                try {
+                    int[] size = UniversalConversionService.imageSize(path);
+                    n.put("width", size[0]); n.put("height", size[1]); n.put("pages", 1);
+                    warnings.add("图片转 Word / Excel 保留图片外观，暂不提供 OCR");
+                } catch (IOException e) { throw new ApiException(ErrorCode.MEDIA_UNREADABLE, "图片无法解析"); }
+            }
         }
         return n;
     }

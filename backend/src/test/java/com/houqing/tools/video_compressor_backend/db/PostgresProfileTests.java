@@ -25,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * The whole application on a real PostgreSQL 16 process with the production migrations — so the SQL that would
  * run in production is the SQL that was tested (V2 §7.1), not an untested translation of the SQLite schema.
  */
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class PostgresProfileTests extends ApiTestBase {
 
     static final EmbeddedPostgres PG;

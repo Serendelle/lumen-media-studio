@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.houqing.tools.video_compressor_backend.common.ApiException;
+import com.houqing.tools.video_compressor_backend.document.UniversalConversionService;
 import com.houqing.tools.video_compressor_backend.media.*;
 import org.springframework.stereotype.Component;
 
@@ -135,17 +136,19 @@ public class QualityReviewer {
                 if (in.asText().startsWith("step:")) consumed.add(Integer.parseInt(in.asText().substring(5)));
             }
         }
-        List<MediaFile> videos = new ArrayList<>(), audios = new ArrayList<>(), images = new ArrayList<>(), pdfs = new ArrayList<>();
+        List<MediaFile> videos = new ArrayList<>(), audios = new ArrayList<>(), images = new ArrayList<>(), documents = new ArrayList<>();
         Map<String, Integer> stepOf = new HashMap<>();
         for (MediaExecutor.StepResult r : results.values()) {
             if (!"SUCCEEDED".equals(r.status()) || consumed.contains(r.stepId()) || r.outputFileId() == null) continue;
             storage.find(ownerId, r.outputFileId()).ifPresent(f -> {
                 stepOf.put(f.getId(), r.stepId());
+                if (f.kind() == MediaKind.PDF || f.kind() == MediaKind.DOCUMENT || "document.convert".equals(r.tool())
+                        || "pdf.process".equals(r.tool())) documents.add(f);
                 String ext = StorageService.extensionOf(f.getStoredName());
                 switch (f.kind()) {
                     case VIDEO -> videos.add(f);
                     case AUDIO -> audios.add(f);
-                    case PDF -> pdfs.add(f);
+                    case PDF -> { }
                     case IMAGE -> (ext.equals("gif") ? videos : images).add(f);
                     default -> { }
                 }
@@ -193,9 +196,22 @@ public class QualityReviewer {
                         "≤ " + im.path("maxBytes").asLong() + " 字节", f.getSizeBytes() + " 字节");
             }
         }
-        if (c.path("document").isObject() && pdfs.isEmpty()) add(checks, 0, "约束·PDF", false, "交付 PDF", "没有 PDF 交付物");
-        for (MediaFile f : c.path("document").isObject() ? pdfs : List.<MediaFile>of()) {
-            add(checks, stepOf.get(f.getId()), "约束·PDF", com.houqing.tools.video_compressor_backend.document.PdfFacts.hasPdfMagic(storage.pathOf(f)), "PDF", "PDF");
+        if (c.path("document").isObject()) {
+            String target = c.path("document").path("format").asText();
+            String name = target.equals("pdf") ? "约束·PDF" : "约束·文档格式";
+            String label = target.toUpperCase(Locale.ROOT);
+            if (documents.isEmpty()) add(checks, 0, name, false, "交付 " + label, "没有文档交付物");
+            for (MediaFile f : documents) {
+                String ext = StorageService.extensionOf(f.getStoredName());
+                boolean archive = f.kind() == MediaKind.ARCHIVE && Set.of("png", "jpg").contains(target);
+                boolean valid = ext.equals(archive ? "zip" : target);
+                if (valid) {
+                    try { valid = UniversalConversionService.verifyOutput(storage.pathOf(f), target, archive) > 0; }
+                    catch (Exception e) { valid = false; }
+                }
+                add(checks, stepOf.get(f.getId()), name, valid, label,
+                        valid ? label + (archive ? "（逐页 ZIP）" : "") : ext.toUpperCase(Locale.ROOT) + "（未满足目标格式或内容无效）");
+            }
         }
     }
 
@@ -246,18 +262,32 @@ public class QualityReviewer {
                 else oks.add(add(checks, r.stepId(), "源文件", false, "可读取", "源文件已不可用，无法对照"));
             }
             case "document.convert" -> {
-                Path pdf = storage.pathOf(f);
-                boolean magic = com.houqing.tools.video_compressor_backend.document.PdfFacts.hasPdfMagic(pdf);
-                oks.add(add(checks, r.stepId(), "PDF 文件头", magic, "%PDF-", magic ? "%PDF-" : "不是 PDF"));
-                if (magic) {
-                    try {
-                        var info = com.houqing.tools.video_compressor_backend.document.PdfFacts.read(pdf);
-                        oks.add(add(checks, r.stepId(), "页数", info.pageCount() >= 1, "≥ 1", String.valueOf(info.pageCount())));
-                        com.houqing.tools.video_compressor_backend.document.PdfFacts.renderHasInk(pdf, 1);
-                        oks.add(add(checks, r.stepId(), "首页可渲染", true, "可渲染", "正常（" + info.pageSizeLabel() + "）"));
-                    } catch (ApiException e) {
-                        oks.add(add(checks, r.stepId(), "可解析", false, "PDF 可打开并渲染", e.getMessage()));
-                    }
+                String target = UniversalConversionService.target(p);
+                boolean imageTarget = Set.of("png", "jpg").contains(target);
+                List<String> inputIds = inputsOf(ownerId, r);
+                boolean singleImage = inputIds.size() == 1 && storage.find(ownerId, inputIds.get(0))
+                        .map(source -> source.kind() == MediaKind.IMAGE).orElse(false);
+                boolean archive = imageTarget && !singleImage;
+                MediaKind expectedKind = archive ? MediaKind.ARCHIVE : target.equals("pdf") ? MediaKind.PDF
+                        : imageTarget ? MediaKind.IMAGE : MediaKind.DOCUMENT;
+                String expectedExt = archive ? "zip" : target;
+                String actualExt = StorageService.extensionOf(f.getStoredName());
+                oks.add(add(checks, r.stepId(), "目标格式", UniversalConversionService.FORMATS.contains(target)
+                                && f.kind() == expectedKind && actualExt.equals(expectedExt),
+                        expectedKind + " / " + expectedExt, f.kind() + " / " + actualExt));
+                if (inputIds.isEmpty()) oks.add(add(checks, r.stepId(), "源文件", false, "可读取任务输入", "输入记录不可用"));
+                if (target.equals("pdf")) {
+                    boolean magic = com.houqing.tools.video_compressor_backend.document.PdfFacts.hasPdfMagic(storage.pathOf(f));
+                    oks.add(add(checks, r.stepId(), "PDF 文件头", magic, "%PDF-", magic ? "%PDF-" : "不是 PDF"));
+                }
+                try {
+                    int units = UniversalConversionService.verifyOutput(storage.pathOf(f), target, archive);
+                    oks.add(add(checks, r.stepId(), target.equals("pdf") ? "页数" : "实际内容可解析", units > 0,
+                            "≥ 1", units + (archive ? " 张图片（逐项解码并核对校验和）" : "")));
+                    if (target.equals("pdf")) oks.add(add(checks, r.stepId(), "首页可渲染", true, "可渲染", "正常"));
+                } catch (Exception e) {
+                    oks.add(add(checks, r.stepId(), "可解析", false, target.toUpperCase(Locale.ROOT) + " 可重新打开",
+                            "实际文件无法按目标格式解析"));
                 }
             }
             case "metadata.scrub" -> {

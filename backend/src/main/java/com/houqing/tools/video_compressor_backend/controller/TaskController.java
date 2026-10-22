@@ -22,10 +22,12 @@ import java.util.Map;
 public class TaskController {
     private final TaskEngine engine;
     private final TaskEventHub hub;
+    private final TaskHistoryService history;
 
-    public TaskController(TaskEngine engine, TaskEventHub hub) {
+    public TaskController(TaskEngine engine, TaskEventHub hub, TaskHistoryService history) {
         this.engine = engine;
         this.hub = hub;
+        this.history = history;
     }
 
     public record CreateTaskRequest(@NotBlank String type,
@@ -61,18 +63,35 @@ public class TaskController {
 
     @GetMapping("/{id}")
     public TaskView get(@PathVariable String id) {
-        return engine.toView(engine.require(CurrentUser.id(), id));
+        return engine.toView(history.requireVisible(CurrentUser.id(), id));
     }
 
     @PostMapping("/{id}/cancel")
     public TaskView cancel(@PathVariable String id) {
+        history.requireVisible(CurrentUser.id(), id);
         return engine.toView(engine.cancel(CurrentUser.id(), id));
     }
 
     @PostMapping("/{id}/retry")
     public TaskView retry(@PathVariable String id) {
+        history.requireVisible(CurrentUser.id(), id);
         return engine.toView(engine.retry(CurrentUser.id(), id));
     }
+
+    @DeleteMapping("/{id}")
+    public TaskHistoryService.DeleteResult delete(@PathVariable String id) {
+        return history.delete(CurrentUser.id(), List.of(id));
+    }
+
+    public record DeleteHistoryRequest(@NotEmpty @Size(max = 200) List<@NotBlank String> taskIds) {}
+
+    @PostMapping("/history/delete")
+    public TaskHistoryService.DeleteResult deleteMany(@Valid @RequestBody DeleteHistoryRequest req) {
+        return history.delete(CurrentUser.id(), req.taskIds());
+    }
+
+    @DeleteMapping("/history")
+    public TaskHistoryService.ClearResult clearHistory() { return history.clear(CurrentUser.id()); }
 
     /**
      * Real-time progress over SSE. Subscribes first, then sends the persisted snapshot, so no transition between
@@ -81,9 +100,11 @@ public class TaskController {
     @GetMapping(value = "/{id}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter events(@PathVariable String id) throws IOException {
         long uid = CurrentUser.id();
-        TaskEntity owned = engine.require(uid, id); // ownership check before subscribing
+        TaskEntity owned = history.requireVisible(uid, id); // visibility and ownership before subscribing
         SseEmitter emitter = hub.subscribe(owned.getId());
-        TaskEntity t = engine.require(uid, id);
+        TaskEntity t;
+        try { t = history.requireVisible(uid, id); }
+        catch (RuntimeException e) { emitter.complete(); throw e; }
         emitter.send(SseEmitter.event().name("status").data(engine.toView(t)));
         if (TaskStatus.valueOf(t.getStatus()).terminal()) hub.complete(id);
         return emitter;

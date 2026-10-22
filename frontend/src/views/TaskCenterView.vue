@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import TaskProgress from '@/components/common/TaskProgress.vue'
 import ResultPreview from '@/components/studio/ResultPreview.vue'
 import VerificationCard from '@/components/media/VerificationCard.vue'
@@ -32,33 +32,75 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const previewing = ref<TaskView | null>(null)
 const acting = ref<string | null>(null)
+const selected = ref<string[]>([])
+const deleting = ref(false)
+const deleteError = ref('')
+let loadRequest = 0
 
 async function load() {
+  const request = ++loadRequest, revision = store.historyRevision
   loading.value = true
   try {
     const p = await tasksApi.list(page.value, PAGE, FILTERS.find((f) => f.k === filter.value)?.s)
-    fetched.value = Object.fromEntries(p.content.map((t) => [t.taskId, t]))
-    ids.value = p.content.map((t) => t.taskId)
+    if (request !== loadRequest || revision !== store.historyRevision) return
+    store.confirmHistory(p.content)
     total.value = p.totalElements
     totalPages.value = p.totalPages
+    if (page.value > Math.max(0, p.totalPages - 1)) {
+      page.value = Math.max(0, p.totalPages - 1)
+      return
+    }
+    fetched.value = Object.fromEntries(p.content.map((t) => [t.taskId, t]))
+    ids.value = p.content.map((t) => t.taskId)
     error.value = null
     // live progress for unfinished rows comes from the shared store's SSE subscriptions
     for (const t of p.content) if (!isTerminal(t)) void store.track(t.taskId)
   } catch (e) {
-    error.value = (e as Error).message
+    if (request === loadRequest) error.value = (e as Error).message
   } finally {
-    loading.value = false
+    if (request === loadRequest) loading.value = false
   }
 }
 onMounted(load)
+onBeforeUnmount(() => { loadRequest++ })
 watch(filter, () => {
-  page.value = 0
+  selected.value = []
+  if (page.value) page.value = 0
+  else void load()
+})
+watch(page, () => { selected.value = []; void load() })
+watch(() => store.historyRevision, () => {
+  if (previewing.value && !store.isHistoryVisible(previewing.value)) previewing.value = null
   void load()
 })
-watch(page, load)
 
 /** Prefer the live copy held by the store (updated over SSE) over the snapshot from the list request. */
-const rows = computed(() => ids.value.map((id) => store.byId[id] ?? fetched.value[id]).filter(Boolean))
+const rows = computed(() => ids.value.map((id) => store.byId[id] ?? fetched.value[id]).filter(t => t && store.isHistoryVisible(t)))
+const deletableRows = computed(() => rows.value.filter(isTerminal))
+const selectedIds = computed(() => selected.value.filter(id => deletableRows.value.some(t => t.taskId === id)))
+const allSelected = computed(() => deletableRows.value.length > 0 && selectedIds.value.length === deletableRows.value.length)
+
+function selectPage(checked: boolean) {
+  selected.value = checked ? deletableRows.value.map(t => t.taskId) : []
+}
+
+async function removeHistory(taskIds?: string[]) {
+  if (deleting.value) return
+  if (taskIds && !taskIds.length) return
+  const question = taskIds ? `删除选中的 ${taskIds.length} 条历史记录？` : '清空全部已结束任务的历史记录（包含成功、失败和已取消，覆盖所有分页）？'
+  if (!window.confirm(`${question}\n原文件和处理结果仍保留在文件库，进行中的任务不受影响。`)) return
+  deleting.value = true
+  deleteError.value = ''
+  try {
+    const result = taskIds ? await store.removeMany(taskIds) : await store.clearHistory()
+    selected.value = []
+    toast.ok(result.deletedCount ? `已删除 ${result.deletedCount} 条历史记录` : '没有需要清空的已结束记录')
+  } catch (e) {
+    deleteError.value = (e as Error).message
+  } finally {
+    deleting.value = false
+  }
+}
 
 function inputNames(t: TaskView) {
   if (!t.inputs?.length) return '—'
@@ -104,6 +146,20 @@ async function copyTrace(id: string) {
       </div>
     </header>
 
+    <div class="history-tools">
+      <label class="select-page">
+        <input type="checkbox" :checked="allSelected" :indeterminate="selectedIds.length > 0 && !allSelected"
+               :disabled="loading || deleting || !deletableRows.length" @change="selectPage(($event.target as HTMLInputElement).checked)" />
+        选择本页已结束任务
+      </label>
+      <button type="button" class="btn btn--sm btn--danger" :disabled="!selectedIds.length || deleting || loading"
+              @click="removeHistory([...selectedIds])">删除所选{{ selectedIds.length ? `（${selectedIds.length}）` : '' }}</button>
+      <button type="button" class="btn btn--sm btn--ghost clear-history" :disabled="deleting || loading" @click="removeHistory()">清空已结束记录</button>
+      <p>仅删除历史记录，原文件和处理结果保留在文件库。</p>
+    </div>
+    <p v-if="deleteError" class="err" role="alert">历史记录删除失败：{{ deleteError }}</p>
+    <p v-if="store.historySyncError" class="err" role="alert">{{ store.historySyncError }} <button type="button" class="btn btn--sm btn--ghost" @click="store.restore().catch(() => {})">重新同步</button></p>
+
     <p v-if="error" class="err" role="alert">
       任务列表加载失败：{{ error }}
       <button type="button" class="btn btn--sm btn--ghost" @click="load">重试</button>
@@ -113,6 +169,8 @@ async function copyTrace(id: string) {
       <article v-for="t in rows" :key="t.taskId" class="row card" :class="`s-${t.status.toLowerCase()}`">
         <div class="main">
           <header class="top">
+            <input v-if="isTerminal(t)" v-model="selected" type="checkbox" :value="t.taskId" :disabled="deleting"
+                   :aria-label="`选择历史记录：${TASK_LABEL[t.type] ?? t.type} ${inputNames(t)}`" />
             <h2>{{ TASK_LABEL[t.type] ?? t.type }}</h2>
             <span class="chip" :class="{ 'chip--mint': t.status === 'SUCCEEDED', 'chip--danger': t.status === 'FAILED', 'chip--fog': !isTerminal(t) }">
               {{ STATUS_LABEL[t.status] }}
@@ -145,6 +203,8 @@ async function copyTrace(id: string) {
           <button v-if="t.status === 'FAILED' || t.status === 'CANCELLED'" type="button" class="btn btn--sm btn--ghost"
                   :disabled="acting === t.taskId || t.errorCode === 'TARGET_UNREACHABLE'"
                   @click="act(t.taskId, () => store.retry(t.taskId), '已重新排队')">重试</button>
+          <button v-if="isTerminal(t)" type="button" class="btn btn--sm btn--danger" :disabled="deleting || acting === t.taskId"
+                  @click="removeHistory([t.taskId])">删除记录</button>
           <button type="button" class="trace mono" :title="`追踪号 ${t.taskId}（点击复制）`" @click="copyTrace(t.taskId)">#{{ t.taskId.slice(0, 8) }}</button>
         </footer>
       </article>
@@ -152,9 +212,9 @@ async function copyTrace(id: string) {
     </section>
 
     <nav v-if="totalPages > 1" class="pager" aria-label="分页">
-      <button type="button" class="btn btn--sm btn--ghost" :disabled="page === 0" @click="page--">上一页</button>
+      <button type="button" class="btn btn--sm btn--ghost" :disabled="page === 0 || loading || deleting" @click="page--">上一页</button>
       <span class="mono">{{ page + 1 }} / {{ totalPages }} · 共 {{ total }} 个</span>
-      <button type="button" class="btn btn--sm btn--ghost" :disabled="page + 1 >= totalPages" @click="page++">下一页</button>
+      <button type="button" class="btn btn--sm btn--ghost" :disabled="page + 1 >= totalPages || loading || deleting" @click="page++">下一页</button>
     </nav>
 
     <ResultPreview :task="previewing" @close="previewing = null" />
@@ -209,6 +269,15 @@ async function copyTrace(id: string) {
   display: grid;
   gap: var(--sp-3);
 }
+.history-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.select-page { display: inline-flex; align-items: center; gap: 8px; color: var(--text-2); font-size: var(--fs-sm); }
+.history-tools p { flex-basis: 100%; font-size: var(--fs-xs); color: var(--text-3); }
+.clear-history { margin-left: auto; }
 .row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

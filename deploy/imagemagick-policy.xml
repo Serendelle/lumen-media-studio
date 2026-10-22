@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<policymap>
+  <policy domain="resource" name="thread" value="2"/>
+  <policy domain="resource" name="memory" value="256MiB"/>
+  <policy domain="resource" name="map" value="512MiB"/>
+  <policy domain="resource" name="disk" value="2GiB"/>
+  <policy domain="resource" name="width" value="16KP"/>
+  <policy domain="resource" name="height" value="16KP"/>
+  <policy domain="resource" name="list-length" value="200"/>
+  <policy domain="resource" name="time" value="300"/>
+  <policy domain="cache" name="synchronize" value="true"/>
+  <policy domain="filter" rights="none" pattern="*"/>
+  <policy domain="delegate" rights="none" pattern="{URL,HTTP,HTTPS,FTP,curl,wget}"/>
+  <policy domain="coder" rights="none" pattern="{HTTP,HTTPS,FTP,MVG,MSL,PS,PS2,PS3,EPS,XPS,PCL}"/>
+  <policy domain="path" rights="none" pattern="@*"/>
+  <policy domain="path" rights="none" pattern="|*"/>
+  <!-- Existing PDF conversion requires Ghostscript; do not disable all delegates. -->
+  <policy domain="coder" rights="read|write" pattern="PDF"/>
+</policymap>

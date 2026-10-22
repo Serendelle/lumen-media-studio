@@ -10,6 +10,7 @@ import {
   Film,
   FileText,
   FileCheck2,
+  Users,
   GraduationCap,
   Video,
   Repeat,
@@ -93,6 +94,7 @@ const navGroups: NavGroupData[] = [
         ]
       },
       { id: 'documents', title: '文档工作台', icon: FileText, href: '/workspace/documents', keywords: 'documents word excel pdf 网页' },
+      { id: 'team', title: '团队协作', icon: Users, href: '/workspace/team', keywords: 'team 多人 协作 腾讯 文档 表格 审核 交付' },
       { id: 'specs', title: '材料规范官', icon: FileCheck2, href: '/workspace/specs', keywords: 'specs 参赛 整理 校验 材料 通知' },
       { id: 'learn', title: '学习播放器', icon: GraduationCap, href: '/workspace/learn', keywords: 'learn 教学 课程 知识图谱 代码' },
     ]
