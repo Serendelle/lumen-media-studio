@@ -18,7 +18,7 @@ public interface LlmClient {
     /**
      * @param messages OpenAI-format messages
      * @param tools    OpenAI-format tool definitions (may be null)
-     * @param toolChoice "auto", "required" or null
+     * @param toolChoice "auto", "required", "none", a specific function name, or null
      * @param onText   receives streamed content deltas (may be null)
      */
     Result chat(ArrayNode messages, ArrayNode tools, String toolChoice, Consumer<String> onText);

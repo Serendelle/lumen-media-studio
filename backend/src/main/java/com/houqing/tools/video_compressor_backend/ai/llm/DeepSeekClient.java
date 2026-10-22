@@ -27,8 +27,8 @@ import java.util.function.Consumer;
 /**
  * DeepSeek chat-completions client (OpenAI-compatible, streaming). The API key is only read here and only
  * placed in the Authorization header: it is never logged, never put in an exception message and never returned.
- * Transient failures (connect errors, 429, 5xx) are retried with backoff — but only before any output streamed,
- * so a retry can never duplicate text the user already saw.
+ * Transient failures (connect errors, 429, 5xx) are retried with backoff before a successful response is accepted.
+ * Once HTTP 200 arrives, an interrupted stream must not resubmit a potentially charged completion.
  */
 @Component
 public class DeepSeekClient implements LlmClient {
@@ -68,7 +68,14 @@ public class DeepSeekClient implements LlmClient {
         body.putObject("stream_options").put("include_usage", true);
         if (tools != null && !tools.isEmpty()) {
             body.set("tools", tools);
-            if (toolChoice != null) body.put("tool_choice", toolChoice);
+            if (toolChoice != null) {
+                if (Set.of("auto", "required", "none").contains(toolChoice)) {
+                    body.put("tool_choice", toolChoice);
+                } else {
+                    body.putObject("tool_choice").put("type", "function")
+                            .putObject("function").put("name", toolChoice);
+                }
+            }
         }
         String payload = body.toString();
         String base = cfg.baseUrl() == null || cfg.baseUrl().isBlank() ? "https://api.deepseek.com" : cfg.baseUrl().replaceAll("/+$", "");
@@ -95,12 +102,13 @@ public class DeepSeekClient implements LlmClient {
                     }
                     throw last;
                 }
+                s.accepted = true;
                 parseStream(res.body(), s, onText);
                 return s.toResult();
             } catch (IOException e) {
                 log.warn("DeepSeek request failed (attempt {}): {}", attempt, e.getClass().getSimpleName());
                 last = new ApiException(ErrorCode.AI_UNAVAILABLE, "无法连接 AI 服务，请检查网络");
-                if (s.emittedText || attempt == MAX_ATTEMPTS) throw last;
+                if (s.accepted || attempt == MAX_ATTEMPTS) throw last;
                 backoff(attempt);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -116,7 +124,7 @@ public class DeepSeekClient implements LlmClient {
         final TreeMap<Integer, String[]> calls = new TreeMap<>(); // index -> [id, name, args]
         String finish;
         int promptTokens, completionTokens;
-        boolean emittedText;
+        boolean accepted;
 
         Result toResult() {
             List<ToolCall> list = new ArrayList<>();
@@ -151,7 +159,6 @@ public class DeepSeekClient implements LlmClient {
                     String text = delta.path("content").isTextual() ? delta.path("content").asText() : null;
                     if (text != null && !text.isEmpty()) {
                         s.content.append(text);
-                        s.emittedText = true;
                         if (onText != null) onText.accept(text);
                     }
                     for (JsonNode tc : delta.path("tool_calls")) {
@@ -166,6 +173,7 @@ public class DeepSeekClient implements LlmClient {
                 }
             }
         }
+        if (s.finish == null) throw new IOException("AI stream ended before its finish reason");
         for (Map.Entry<Integer, String[]> e : s.calls.entrySet()) {
             if (e.getValue()[0] == null) e.getValue()[0] = "call_" + e.getKey();
         }

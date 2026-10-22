@@ -72,8 +72,8 @@ export const ERROR_HINT: Record<string, string> = {
   DOCUMENT_CONVERSION_FAILED: '转换引擎没有生成有效的目标文件，可以重试；反复失败请检查原文件能否正常打开。',
   DOCUMENT_CONVERSION_TIMEOUT: '转换超过 120 秒被中止，文档可能过大或过于复杂，可拆分后再转换。',
   CONVERTER_UNAVAILABLE: '服务器缺少当前路线所需的转换组件（如 LibreOffice、Chrome / Edge 或 OFD worker），请检查支持的转换路线。',
-  ASR_UNAVAILABLE: '语音识别未配置或暂时不可用：在后端 .env 中设置 DASHSCOPE_API_KEY，或检查网络与阿里云账户。',
-  ASR_FAILED: '语音识别没有成功（例如音频无法下载或没有讲话声），可以重试。',
-  LESSON_INVALID: 'AI 整理出的课程结构没有通过时间与结构校验，可以重试一次。',
+  ASR_UNAVAILABLE: '按上方原因检查语音识别配置或网络；需要代理时在后端 .env 设置 DASHSCOPE_PROXY。提交结果不确定时，先确认阿里云任务状态再重试。',
+  ASR_FAILED: '按上方原因检查音频和语音识别服务；如果已提交识别任务，先确认任务状态再重试。',
+  LESSON_INVALID: 'AI 返回的课程结构缺失、不完整或未通过校验，具体原因见上方；确认后再重新分析。',
   OUTPUT_INVALID: '输出没有通过独立核验（见下方检查项），可以重试；反复出现请换一种输出格式。',
 }

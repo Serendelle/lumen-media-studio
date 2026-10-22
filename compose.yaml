@@ -69,6 +69,7 @@ services:
       DEEPSEEK_PROXY: ${DEEPSEEK_PROXY:-}
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
       DASHSCOPE_ASR_MODEL: ${DASHSCOPE_ASR_MODEL:-paraformer-v2}
+      DASHSCOPE_PROXY: ${DASHSCOPE_PROXY:-}
       JAVA_TOOL_OPTIONS: -Xms256m -Xmx1536m -XX:MaxMetaspaceSize=384m -XX:ActiveProcessorCount=3 -Djava.awt.headless=true
     volumes:
       - application-data:/data

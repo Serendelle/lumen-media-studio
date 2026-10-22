@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.houqing.tools.video_compressor_backend.common.ApiException;
 import com.houqing.tools.video_compressor_backend.common.ErrorCode;
 import com.houqing.tools.video_compressor_backend.config.AppProperties;
+import com.houqing.tools.video_compressor_backend.media.CancellationToken;
 import com.houqing.tools.video_compressor_backend.support.TestMedia;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -32,8 +33,16 @@ class DashScopeAsrClientTest {
     private HttpServer server;
     private String base;
     private final Map<String, String> seen = new ConcurrentHashMap<>();
+    private final AtomicInteger policies = new AtomicInteger();
+    private final AtomicInteger submissions = new AtomicInteger();
+    private final AtomicInteger downloads = new AtomicInteger();
     private final AtomicInteger polls = new AtomicInteger();
     private volatile String finalStatus = "SUCCEEDED";
+    private volatile int policyFailures;
+    private volatile int policyFailureStatus = 503;
+    private volatile int submitStatus = 200;
+    private volatile boolean closeSubmission;
+    private volatile boolean invalidResult;
 
     @BeforeEach
     void start() throws IOException {
@@ -42,6 +51,10 @@ class DashScopeAsrClientTest {
         server.createContext("/api/v1/uploads", ex -> {
             seen.put("policy.query", ex.getRequestURI().getQuery());
             seen.put("policy.auth", header(ex, "Authorization"));
+            if (policies.incrementAndGet() <= policyFailures) {
+                reply(ex, policyFailureStatus, "{\"message\":\"temporary test failure\"}");
+                return;
+            }
             reply(ex, 200, "{\"request_id\":\"r1\",\"data\":{\"policy\":\"POL\",\"signature\":\"SIG\",\"upload_dir\":\"dashscope-instant/abc/2026-10-19\","
                     + "\"upload_host\":\"" + base + "/oss\",\"oss_access_key_id\":\"AK\",\"x_oss_object_acl\":\"private\",\"x_oss_forbid_overwrite\":\"true\"}}");
         });
@@ -51,9 +64,18 @@ class DashScopeAsrClientTest {
             reply(ex, 200, "");
         });
         server.createContext("/api/v1/services/audio/asr/transcription", ex -> {
+            submissions.incrementAndGet();
             seen.put("submit.async", header(ex, "X-DashScope-Async"));
             seen.put("submit.oss", header(ex, "X-DashScope-OssResourceResolve"));
             seen.put("submit.body", new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            if (closeSubmission) {
+                ex.close();
+                return;
+            }
+            if (submitStatus != 200) {
+                reply(ex, submitStatus, "{\"message\":\"temporary test failure\"}");
+                return;
+            }
             reply(ex, 200, "{\"output\":{\"task_status\":\"PENDING\",\"task_id\":\"task-1\"},\"request_id\":\"r2\"}");
         });
         server.createContext("/api/v1/tasks/task-1", ex -> {
@@ -69,7 +91,12 @@ class DashScopeAsrClientTest {
             }
         });
         server.createContext("/result.json", ex -> {
+            downloads.incrementAndGet();
             seen.put("result.auth", String.valueOf(header(ex, "Authorization")));
+            if (invalidResult) {
+                reply(ex, 200, "<html>not JSON</html>");
+                return;
+            }
             reply(ex, 200, "{\"file_url\":\"oss://x\",\"properties\":{\"original_duration_in_milliseconds\":9000},\"transcripts\":[{\"channel_id\":0,"
                     + "\"text\":\"…\",\"sentences\":[{\"begin_time\":4100,\"end_time\":9000,\"text\":\"然后写代码。\",\"sentence_id\":2},"
                     + "{\"begin_time\":120,\"end_time\":4000,\"text\":\"今天讲斐波那契。\",\"sentence_id\":1},{\"begin_time\":9000,\"end_time\":9100,\"text\":\" \"}]}]}");
@@ -81,9 +108,13 @@ class DashScopeAsrClientTest {
     void stop() { server.stop(0); }
 
     private DashScopeAsrClient client(String key) {
+        return client(key, base, null);
+    }
+
+    private DashScopeAsrClient client(String key, String apiBase, String proxy) {
         AppProperties p = TestMedia.props(Path.of("target"));
         AppProperties props = new AppProperties(p.dataDir(), p.retentionHours(), p.tools(), p.media(), p.security(), p.cors(), p.ai(),
-                new AppProperties.Asr(key, base, "paraformer-v2"), p.lesson());
+                new AppProperties.Asr(key, apiBase, "paraformer-v2", proxy), p.lesson());
         return new DashScopeAsrClient(props, new ObjectMapper());
     }
 
@@ -104,7 +135,7 @@ class DashScopeAsrClientTest {
         assertThat(seen.get("submit.oss")).isEqualTo("enable");
         assertThat(seen.get("submit.body")).contains("\"model\":\"paraformer-v2\"", "\"file_urls\":[\"oss://dashscope-instant/abc/2026-10-19/",
                 "\"timestamp_alignment_enabled\":true");
-        assertThat(seen.get("poll.method")).isEqualTo("POST");
+        assertThat(seen.get("poll.method")).isEqualTo("GET");
         assertThat(polls.get()).isEqualTo(2);
         assertThat(seen.get("result.auth")).isEqualTo("null"); // the key is not sent to the result URL
         assertThat(stages).containsExactly("上传音频", "提交识别", "识别中", "下载结果");
@@ -130,6 +161,108 @@ class DashScopeAsrClientTest {
         assertThatThrownBy(() -> client("").transcribe(Path.of("x.mp3"), null, x -> {}))
                 .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.getCode()).isEqualTo(ErrorCode.ASR_UNAVAILABLE));
         assertThat(seen).isEmpty();
+    }
+
+    @Test
+    void retriesOnlyTheTemporaryPolicyFailureBeforeContinuing() throws Exception {
+        policyFailures = 2;
+        Path audio = Files.createTempFile("speech", ".mp3");
+
+        assertThat(client("sk-test-key").transcribe(audio, null, x -> {})).hasSize(2);
+
+        assertThat(policies.get()).isEqualTo(DashScopeAsrClient.MAX_READ_ATTEMPTS);
+        assertThat(submissions.get()).isEqualTo(1);
+    }
+
+    @Test
+    void doesNotRetryAnAuthenticationFailure() throws Exception {
+        policyFailures = 10;
+        policyFailureStatus = 403;
+        Path audio = Files.createTempFile("speech", ".mp3");
+
+        assertThatThrownBy(() -> client("sk-test-key").transcribe(audio, null, x -> {}))
+                .isInstanceOfSatisfying(ApiException.class, e -> {
+                    assertThat(e.getCode()).isEqualTo(ErrorCode.ASR_UNAVAILABLE);
+                    assertThat(e.getMessage()).contains("API Key", "DASHSCOPE_BASE_URL").doesNotContain("sk-test-key");
+                });
+        assertThat(policies.get()).isEqualTo(1);
+        assertThat(submissions.get()).isZero();
+    }
+
+    @Test
+    void stopsRetryingAfterTheReadAttemptLimit() throws Exception {
+        policyFailures = 10;
+        Path audio = Files.createTempFile("speech", ".mp3");
+
+        assertThatThrownBy(() -> client("sk-test-key").transcribe(audio, null, x -> {}))
+                .isInstanceOfSatisfying(ApiException.class, e -> {
+                    assertThat(e.getCode()).isEqualTo(ErrorCode.ASR_FAILED);
+                    assertThat(e.getMessage()).contains("获取音频上传凭证", "503");
+                });
+        assertThat(policies.get()).isEqualTo(DashScopeAsrClient.MAX_READ_ATTEMPTS);
+        assertThat(submissions.get()).isZero();
+    }
+
+    @Test
+    void neverReplaysChargedSubmissionOnAServerFailure() throws Exception {
+        submitStatus = 503;
+        Path audio = Files.createTempFile("speech", ".mp3");
+
+        assertThatThrownBy(() -> client("sk-test-key").transcribe(audio, null, x -> {}))
+                .isInstanceOfSatisfying(ApiException.class, e -> {
+                    assertThat(e.getCode()).isEqualTo(ErrorCode.ASR_FAILED);
+                    assertThat(e.getMessage()).contains("提交识别任务", "503");
+                });
+        assertThat(submissions.get()).isEqualTo(1);
+        assertThat(polls.get()).isZero();
+    }
+
+    @Test
+    void lostSubmissionResponseExplainsUnconfirmedTaskWithoutReplayingIt() throws Exception {
+        closeSubmission = true;
+        Path audio = Files.createTempFile("speech", ".mp3");
+
+        assertThatThrownBy(() -> client("sk-test-key").transcribe(audio, null, x -> {}))
+                .isInstanceOfSatisfying(ApiException.class, e -> {
+                    assertThat(e.getCode()).isEqualTo(ErrorCode.ASR_UNAVAILABLE);
+                    assertThat(e.getMessage()).contains("提交识别任务", "提交结果未确认", "未自动重试").doesNotContain("sk-test-key");
+                });
+        assertThat(submissions.get()).isEqualTo(1);
+    }
+
+    @Test
+    void malformedResultIsAResponseErrorInsteadOfANetworkError() throws Exception {
+        invalidResult = true;
+        Path audio = Files.createTempFile("speech", ".mp3");
+
+        assertThatThrownBy(() -> client("sk-test-key").transcribe(audio, null, x -> {}))
+                .isInstanceOfSatisfying(ApiException.class, e -> {
+                    assertThat(e.getCode()).isEqualTo(ErrorCode.ASR_FAILED);
+                    assertThat(e.getMessage()).contains("下载识别结果", "无效数据").doesNotContain("检查网络");
+                });
+        assertThat(downloads.get()).isEqualTo(1);
+        assertThat(submissions.get()).isEqualTo(1);
+    }
+
+    @Test
+    void anAlreadyCancelledTaskMakesNoRequests() {
+        CancellationToken token = new CancellationToken();
+        token.cancel();
+
+        assertThatThrownBy(() -> client("sk-test-key").transcribe(Path.of("x.mp3"), token, x -> {}))
+                .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.getCode()).isEqualTo(ErrorCode.CANCELLED));
+        assertThat(seen).isEmpty();
+    }
+
+    @Test
+    void honorsTheExplicitAsrProxy() throws Exception {
+        Path audio = Files.createTempFile("speech", ".mp3");
+
+        assertThat(client("sk-test-key", "http://requires-proxy.invalid", base).transcribe(audio, null, x -> {})).hasSize(2);
+
+        assertThat(policies.get()).isEqualTo(1);
+        assertThat(submissions.get()).isEqualTo(1);
+        assertThat(seen.get("result.auth")).isEqualTo("null");
     }
 
     private static String header(HttpExchange ex, String name) { return ex.getRequestHeaders().getFirst(name); }

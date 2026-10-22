@@ -169,3 +169,14 @@ mvn -B test -Dtest=AiLiveTests -Dai.live=true
 | `start-windows.ps1 -Port 8091` | 端口被其他程序占用 | 「端口 8091 已被其他程序占用…」，退出码 1 |
 | `stop-windows.ps1` | 停止 | 结束整个进程树，事后没有残留的 java 进程 |
 | 单端口访问 | 后端直接提供前端 | `/`、`/studio`、`/login` 返回 200（页面）；静态资源 200；`/api/tasks` 未登录返回 401 |
+
+---
+
+## 2026-10-23：课程分析失败修复
+
+- 课程结构现在指定调用 `submit_lesson`，检查所有匹配调用；兼容完整 JSON / 单个 JSON 代码块，仍经过必填字段、时间范围、父子关系和代码证据校验。格式错误最多定向修复一次，截断和内容过滤有独立提示，不生成空课程替代失败。
+- ASR 任务查询按[阿里云异步任务协议](https://www.alibabacloud.com/help/en/model-studio/manage-asynchronous-tasks)使用 GET。只有凭证获取、进度查询和结果下载可有限重试；音频上传和识别提交不自动重发。网络错误显示失败阶段，提交响应丢失会提示先确认云端状态。
+- 支持独立的 `DASHSCOPE_PROXY`，已接入本地配置和 Docker Compose；默认仍为直连。
+- DeepSeek 的 HTTP 200 流式响应若中途结束，无论是否已有内容，都不自动重发；本地 HTTP 替身验证了空响应、仅角色事件和部分工具参数三种情况。
+- 后端首轮回归：53 项，52 通过，0 失败，1 跳过（既有文档转换测试的 LibreOffice 未加入该次测试 PATH）。最终流中断边界修复后，`DeepSeekClientTests`、`AiUnitTests`、`LessonStructurerTests` 共 28 项全部通过。`LessonPipelineTests` 的 4 项使用本地 FFmpeg / OCR 和脚本化云服务替身，均通过。
+- `npm run build` 通过，部署文件的 8 项 Python 测试通过，后端 JAR 打包通过。没有重跑用户视频，也没有调用真实付费 ASR / LLM 接口。

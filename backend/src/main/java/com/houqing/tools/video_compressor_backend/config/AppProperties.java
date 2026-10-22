@@ -1,6 +1,7 @@
 package com.houqing.tools.video_compressor_backend.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -38,7 +39,12 @@ public record AppProperties(
     }
 
     /** Cloud speech recognition (Alibaba Cloud Model Studio / DashScope). The key is server-side only. */
-    public record Asr(String apiKey, String baseUrl, String model) {
+    public record Asr(String apiKey, String baseUrl, String model, String proxy) {
+        @ConstructorBinding
+        public Asr {}
+
+        public Asr(String apiKey, String baseUrl, String model) { this(apiKey, baseUrl, model, ""); }
+
         public boolean configured() {
             return apiKey != null && !apiKey.isBlank() && !apiKey.contains("your-key");
         }
